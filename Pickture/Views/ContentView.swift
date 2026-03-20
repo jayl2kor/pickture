@@ -5,6 +5,7 @@ struct ContentView: View {
     @StateObject private var viewModel = PhotoViewModel()
     @State private var pulseAnalyze = false
     @State private var showResults = false
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     // Warm pink-coral accent
     private let accentGradient = LinearGradient(
@@ -16,7 +17,7 @@ struct ContentView: View {
     // Text colors
     private let textPrimary = Color(red: 0.2, green: 0.15, blue: 0.25)
     private let textSecondary = Color(red: 0.45, green: 0.4, blue: 0.5)
-    private let textTertiary = Color(red: 0.55, green: 0.50, blue: 0.58)
+    private let textTertiary = Color(red: 0.42, green: 0.38, blue: 0.45)
 
     // Card / surface
     private let cardFill = Color.white
@@ -86,7 +87,7 @@ struct ContentView: View {
                     .font(.system(size: 14, weight: .medium))
                     .foregroundStyle(accentGradient)
 
-                Text("AI Photo Selector")
+                Text("Pickture")
                     .font(.system(size: 13, weight: .semibold, design: .rounded))
                     .foregroundColor(textTertiary)
                     .tracking(1.5)
@@ -399,6 +400,7 @@ struct ContentView: View {
             .accessibilityLabel(isEnabled ? "분석 시작" : "분석 시작 불가, 사진을 더 선택해주세요")
             .disabled(!isEnabled)
             .onAppear {
+                guard !reduceMotion else { return }
                 withAnimation(.easeInOut(duration: 1.5).repeatForever(autoreverses: true)) {
                     pulseAnalyze = true
                 }

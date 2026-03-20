@@ -9,6 +9,7 @@ private struct ScoreBar: View {
     let color: Color
 
     @State private var animatedScore: Double = 0
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
         HStack(spacing: 8) {
@@ -50,8 +51,12 @@ private struct ScoreBar: View {
         .accessibilityElement(children: .combine)
         .accessibilityLabel("\(label) \(Int(score * 100))점")
         .onAppear {
-            withAnimation(.easeOut(duration: 0.8).delay(0.1)) {
+            if reduceMotion {
                 animatedScore = score
+            } else {
+                withAnimation(.easeOut(duration: 0.8).delay(0.1)) {
+                    animatedScore = score
+                }
             }
         }
     }
