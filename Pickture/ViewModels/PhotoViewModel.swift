@@ -13,6 +13,7 @@ final class PhotoViewModel: ObservableObject {
     @Published var progressCurrent = 0
     @Published var progressTotal = 0
     @Published var isFavorited = false
+    @Published var showFavoriteError = false
     @Published var topN = 3
 
     private let analyzer = ImageAnalyzer()
@@ -84,7 +85,10 @@ final class PhotoViewModel: ObservableObject {
 
         Task {
             let status = await PHPhotoLibrary.requestAuthorization(for: .readWrite)
-            guard status == .authorized || status == .limited else { return }
+            guard status == .authorized || status == .limited else {
+                showFavoriteError = true
+                return
+            }
 
             let assets = PHAsset.fetchAssets(withLocalIdentifiers: identifiers, options: nil)
             guard assets.count > 0 else { return }

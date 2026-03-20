@@ -73,6 +73,16 @@ struct ContentView: View {
                 UIImpactFeedbackGenerator(style: .medium).impactOccurred()
             }
         }
+        .alert("사진 라이브러리 접근 필요", isPresented: $viewModel.showFavoriteError) {
+            Button("설정으로 이동") {
+                if let url = URL(string: UIApplication.openSettingsURLString) {
+                    UIApplication.shared.open(url)
+                }
+            }
+            Button("취소", role: .cancel) {}
+        } message: {
+            Text("즐겨찾기 등록을 위해 사진 라이브러리 쓰기 권한이 필요합니다. 설정에서 권한을 허용해주세요.")
+        }
         .onChange(of: viewModel.candidates.count) { newCount in
             if newCount == 0 { showResults = false }
         }
