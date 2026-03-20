@@ -366,43 +366,52 @@ struct ContentView: View {
 
     private var analyzeButton: some View {
         let isEnabled = viewModel.selectedItems.count > viewModel.topN
+        let needed = viewModel.topN + 1
 
-        return Button {
-            viewModel.loadAndAnalyze()
-        } label: {
-            HStack(spacing: 10) {
-                Image(systemName: "wand.and.stars")
-                    .font(.system(size: 17, weight: .semibold))
+        return VStack(spacing: 8) {
+            Button {
+                viewModel.loadAndAnalyze()
+            } label: {
+                HStack(spacing: 10) {
+                    Image(systemName: "wand.and.stars")
+                        .font(.system(size: 17, weight: .semibold))
 
-                Text("분석 시작")
-                    .font(.system(size: 17, weight: .bold, design: .rounded))
-            }
-            .frame(maxWidth: .infinity)
-            .padding(.vertical, 16)
-            .background(
-                Group {
-                    if isEnabled {
-                        RoundedRectangle(cornerRadius: 16)
-                            .fill(accentGradient)
-                            .shadow(color: Color.pink.opacity(0.35), radius: 16, y: 4)
-                            .scaleEffect(pulseAnalyze ? 1.02 : 1.0)
-                    } else {
-                        RoundedRectangle(cornerRadius: 16)
-                            .fill(Color.gray.opacity(0.22))
-                    }
+                    Text("분석 시작")
+                        .font(.system(size: 17, weight: .bold, design: .rounded))
                 }
-            )
-            .foregroundColor(isEnabled ? .white : textTertiary)
-        }
-        .accessibilityLabel(isEnabled ? "분석 시작" : "분석 시작 불가, 사진을 더 선택해주세요")
-        .disabled(!isEnabled)
-        .onAppear {
-            withAnimation(.easeInOut(duration: 1.5).repeatForever(autoreverses: true)) {
-                pulseAnalyze = true
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 16)
+                .background(
+                    Group {
+                        if isEnabled {
+                            RoundedRectangle(cornerRadius: 16)
+                                .fill(accentGradient)
+                                .shadow(color: Color.pink.opacity(0.35), radius: 16, y: 4)
+                                .scaleEffect(pulseAnalyze ? 1.02 : 1.0)
+                        } else {
+                            RoundedRectangle(cornerRadius: 16)
+                                .fill(Color.gray.opacity(0.22))
+                        }
+                    }
+                )
+                .foregroundColor(isEnabled ? .white : textTertiary)
             }
-        }
-        .onDisappear {
-            pulseAnalyze = false
+            .accessibilityLabel(isEnabled ? "분석 시작" : "분석 시작 불가, 사진을 더 선택해주세요")
+            .disabled(!isEnabled)
+            .onAppear {
+                withAnimation(.easeInOut(duration: 1.5).repeatForever(autoreverses: true)) {
+                    pulseAnalyze = true
+                }
+            }
+            .onDisappear {
+                pulseAnalyze = false
+            }
+
+            if !isEnabled && !viewModel.selectedItems.isEmpty {
+                Text("최소 \(needed)장 이상 선택해주세요 (현재 \(viewModel.selectedItems.count)장)")
+                    .font(.system(size: 12, design: .rounded))
+                    .foregroundColor(textTertiary)
+            }
         }
     }
 
