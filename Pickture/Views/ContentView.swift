@@ -560,29 +560,42 @@ struct ContentView: View {
     private func candidateCard(candidate: PhotoCandidate, rank: Int) -> some View {
         ZStack(alignment: .topTrailing) {
             ResultCardView(candidate: candidate, rank: rank)
-                .onTapGesture {
-                    guard viewModel.isCompareMode else { return }
-                    withAnimation(.easeInOut(duration: 0.2)) {
-                        viewModel.toggleCompareSelection(candidate)
-                    }
-                }
 
             if viewModel.isCompareMode {
+                // Dim overlay for unselected cards
                 let isSelected = viewModel.isSelectedForCompare(candidate)
+                RoundedRectangle(cornerRadius: 20)
+                    .fill(Color.black.opacity(isSelected ? 0 : 0.15))
+                    .allowsHitTesting(false)
+
+                // Check badge
                 ZStack {
                     Circle()
                         .fill(isSelected ? Color.pink : Color.white.opacity(0.8))
-                        .frame(width: 30, height: 30)
+                        .frame(width: 32, height: 32)
                         .shadow(color: Color.black.opacity(0.15), radius: 3, y: 1)
 
                     if isSelected {
                         Image(systemName: "checkmark")
                             .font(.system(size: 14, weight: .bold))
                             .foregroundColor(.white)
+                    } else {
+                        Circle()
+                            .stroke(Color.gray.opacity(0.3), lineWidth: 2)
+                            .frame(width: 32, height: 32)
                     }
                 }
                 .padding(16)
+                .allowsHitTesting(false)
             }
+        }
+        .contentShape(Rectangle())
+        .onTapGesture {
+            guard viewModel.isCompareMode else { return }
+            withAnimation(.easeInOut(duration: 0.2)) {
+                viewModel.toggleCompareSelection(candidate)
+            }
+            UIImpactFeedbackGenerator(style: .light).impactOccurred()
         }
     }
 
