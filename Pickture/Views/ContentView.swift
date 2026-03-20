@@ -17,7 +17,7 @@ struct ContentView: View {
     // Text colors
     private let textPrimary = Color(red: 0.2, green: 0.15, blue: 0.25)
     private let textSecondary = Color(red: 0.45, green: 0.4, blue: 0.5)
-    private let textTertiary = Color(red: 0.42, green: 0.38, blue: 0.45)
+    private let textTertiary = Color(red: 0.35, green: 0.32, blue: 0.38)
 
     // Card / surface
     private let cardFill = Color.white
