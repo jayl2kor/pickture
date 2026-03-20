@@ -468,7 +468,7 @@ struct ContentView: View {
                         .transition(.opacity.combined(with: .move(edge: .top)))
 
                     // Top N cards with staggered animation
-                    ForEach(Array(viewModel.candidates.prefix(viewModel.topN).enumerated()), id: \.element.id) { index, candidate in
+                    ForEach(Array(viewModel.sortedCandidates.prefix(viewModel.topN).enumerated()), id: \.element.id) { index, candidate in
                         ResultCardView(candidate: candidate, rank: index + 1)
                             .opacity(showResults ? 1 : 0)
                             .offset(y: showResults ? 0 : 40)
@@ -604,7 +604,7 @@ struct ContentView: View {
     }
 
     private func shareTopPhotos() {
-        let images = viewModel.candidates.prefix(viewModel.topN).map(\.image)
+        let images = viewModel.sortedCandidates.prefix(viewModel.topN).map(\.image)
         guard !images.isEmpty else { return }
 
         let activityVC = UIActivityViewController(activityItems: images, applicationActivities: nil)
@@ -647,7 +647,7 @@ struct ContentView: View {
                 GridItem(.flexible(), spacing: 12),
                 GridItem(.flexible(), spacing: 12)
             ], spacing: 12) {
-                ForEach(Array(viewModel.candidates.dropFirst(viewModel.topN).enumerated()), id: \.element.id) { _, candidate in
+                ForEach(Array(viewModel.sortedCandidates.dropFirst(viewModel.topN).enumerated()), id: \.element.id) { _, candidate in
                     remainingCard(candidate: candidate)
                 }
             }

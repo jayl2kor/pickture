@@ -15,6 +15,15 @@ final class PhotoViewModel: ObservableObject {
     @Published var isFavorited = false
     @Published var showFavoriteError = false
     @Published var topN = 3
+    @Published var sortCriteria: SortCriteria = .totalScore
+
+    var sortedCandidates: [PhotoCandidate] {
+        candidates.sorted {
+            let s0 = $0.scores.map { sortCriteria.score(from: $0) } ?? 0
+            let s1 = $1.scores.map { sortCriteria.score(from: $0) } ?? 0
+            return s0 > s1
+        }
+    }
 
     private let analyzer = ImageAnalyzer()
     private var analysisTask: Task<Void, Never>?
@@ -80,7 +89,7 @@ final class PhotoViewModel: ObservableObject {
     }
 
     func favoriteTopN() {
-        let identifiers = candidates.prefix(topN).compactMap(\.assetIdentifier)
+        let identifiers = sortedCandidates.prefix(topN).compactMap(\.assetIdentifier)
         guard !identifiers.isEmpty else { return }
 
         Task {

@@ -36,3 +36,23 @@ struct PhotoCandidate: Identifiable {
     let assetIdentifier: String?
     var scores: AnalysisScores?
 }
+
+enum SortCriteria: String, CaseIterable {
+    case totalScore = "총점순"
+    case sharpness = "선명도순"
+    case faceQuality = "얼굴 품질순"
+    case eyesOpen = "눈 뜨임순"
+    case exposure = "노출순"
+    case composition = "구도순"
+
+    func score(from s: AnalysisScores) -> Double {
+        switch self {
+        case .totalScore: return s.totalScore
+        case .sharpness: return s.sharpness
+        case .faceQuality: return s.faceQuality
+        case .eyesOpen: return s.eyesOpen
+        case .exposure: return s.exposure
+        case .composition: return s.composition
+        }
+    }
+}
