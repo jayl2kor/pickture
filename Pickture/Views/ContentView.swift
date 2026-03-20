@@ -412,28 +412,6 @@ struct ContentView: View {
         Group {
             if !viewModel.candidates.isEmpty {
                 VStack(spacing: 24) {
-                    // Re-select button
-                    Button {
-                        withAnimation(.easeInOut(duration: 0.3)) {
-                            viewModel.reset()
-                        }
-                    } label: {
-                        HStack(spacing: 8) {
-                            Image(systemName: "arrow.counterclockwise")
-                                .font(.system(size: 15, weight: .semibold))
-                            Text("처음부터 다시 하기")
-                                .font(.system(size: 15, weight: .semibold, design: .rounded))
-                        }
-                        .foregroundColor(textSecondary)
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 14)
-                        .background(
-                            RoundedRectangle(cornerRadius: 16)
-                                .fill(cardFill)
-                        )
-                        .shadow(color: Color.black.opacity(0.06), radius: 6, y: 2)
-                    }
-
                     // TOP N Header
                     topNHeader
                         .transition(.opacity.combined(with: .move(edge: .top)))
@@ -456,6 +434,28 @@ struct ContentView: View {
                     // The rest
                     if viewModel.candidates.count > viewModel.topN {
                         remainingSection
+                    }
+
+                    // Re-select button at bottom
+                    Button {
+                        withAnimation(.easeInOut(duration: 0.3)) {
+                            viewModel.reset()
+                        }
+                    } label: {
+                        HStack(spacing: 8) {
+                            Image(systemName: "arrow.counterclockwise")
+                                .font(.system(size: 15, weight: .semibold))
+                            Text("처음부터 다시 하기")
+                                .font(.system(size: 15, weight: .semibold, design: .rounded))
+                        }
+                        .foregroundColor(textSecondary)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 14)
+                        .background(
+                            RoundedRectangle(cornerRadius: 16)
+                                .fill(cardFill)
+                        )
+                        .shadow(color: Color.black.opacity(0.06), radius: 6, y: 2)
                     }
                 }
             }
