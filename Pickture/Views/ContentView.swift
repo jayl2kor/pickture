@@ -496,6 +496,30 @@ struct ContentView: View {
         Group {
             if !viewModel.candidates.isEmpty {
                 VStack(spacing: 24) {
+                    // Mini header with app name + reset
+                    HStack {
+                        HStack(spacing: 4) {
+                            Image(systemName: "sparkles")
+                                .font(.system(size: 12))
+                            Text("Pickture")
+                                .font(.system(size: 13, weight: .semibold, design: .rounded))
+                                .tracking(1)
+                        }
+                        .foregroundColor(textTertiary)
+
+                        Spacer()
+
+                        Button {
+                            withAnimation(.easeInOut(duration: 0.3)) {
+                                viewModel.reset()
+                            }
+                        } label: {
+                            Text("다시 선택")
+                                .font(.system(size: 14, weight: .semibold, design: .rounded))
+                                .foregroundColor(Color.pink)
+                        }
+                    }
+
                     // TOP N Header
                     topNHeader
                         .transition(.opacity.combined(with: .move(edge: .top)))
