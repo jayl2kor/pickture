@@ -78,8 +78,12 @@ struct ContentView: View {
         .onChange(of: viewModel.isAnalyzing) { newValue in
             if !newValue && !viewModel.candidates.isEmpty {
                 showResults = false
-                withAnimation(.spring(response: 0.6, dampingFraction: 0.8)) {
+                if reduceMotion {
                     showResults = true
+                } else {
+                    withAnimation(.spring(response: 0.6, dampingFraction: 0.8)) {
+                        showResults = true
+                    }
                 }
                 UIImpactFeedbackGenerator(style: .medium).impactOccurred()
             }

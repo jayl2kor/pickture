@@ -119,6 +119,7 @@ private struct ScoreRing: View {
     let rank: Int
 
     @State private var animatedScore: Double = 0
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     private var ringColor: Color {
         switch rank {
@@ -158,8 +159,12 @@ private struct ScoreRing: View {
             }
         }
         .onAppear {
-            withAnimation(.easeOut(duration: 1.0).delay(0.2)) {
+            if reduceMotion {
                 animatedScore = score
+            } else {
+                withAnimation(.easeOut(duration: 1.0).delay(0.2)) {
+                    animatedScore = score
+                }
             }
         }
     }
