@@ -176,8 +176,9 @@ struct ResultCardView: View {
     let candidate: PhotoCandidate
     let rank: Int
 
-    private var imageHeight: CGFloat {
-        rank == 1 ? 340 : 280
+    // Image aspect ratio (width:height). Higher = shorter image
+    private var imageAspect: CGFloat {
+        rank == 1 ? 0.85 : 1.0
     }
 
     private static let scoreIconMap: [String: String] = [
@@ -194,8 +195,8 @@ struct ResultCardView: View {
                 Image(uiImage: candidate.image)
                     .resizable()
                     .aspectRatio(contentMode: .fill)
-                    .frame(maxWidth: .infinity)
-                    .frame(height: imageHeight)
+                    .frame(minWidth: 0, maxWidth: .infinity)
+                    .aspectRatio(imageAspect, contentMode: .fit)
                     .clipped()
 
                 VStack {
@@ -222,8 +223,7 @@ struct ResultCardView: View {
                     }
                 }
             }
-            .frame(height: imageHeight)
-            .clipped()
+            .clipShape(Rectangle())
 
             if let scores = candidate.scores {
                 VStack(spacing: 8) {
