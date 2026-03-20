@@ -298,7 +298,7 @@ struct ContentView: View {
                 analyzingView
             } else if !viewModel.candidates.isEmpty {
                 EmptyView()
-            } else {
+            } else if !viewModel.selectedItems.isEmpty {
                 analyzeButton
             }
         }
