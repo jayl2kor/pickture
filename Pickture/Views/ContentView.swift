@@ -86,6 +86,16 @@ struct ContentView: View {
         .onChange(of: viewModel.candidates.count) { newCount in
             if newCount == 0 { showResults = false }
         }
+        .fullScreenCover(isPresented: $viewModel.showComparison) {
+            if viewModel.compareSelection.count == 2 {
+                ComparisonView(
+                    left: viewModel.compareSelection[0],
+                    right: viewModel.compareSelection[1]
+                ) {
+                    viewModel.exitCompareMode()
+                }
+            }
+        }
     }
 
     // MARK: - Header
@@ -467,9 +477,18 @@ struct ContentView: View {
                     topNHeader
                         .transition(.opacity.combined(with: .move(edge: .top)))
 
+                    // Compare mode toggle
+                    compareToggleButton
+
+                    if viewModel.isCompareMode {
+                        Text("비교할 사진 2장을 탭해주세요 (\(viewModel.compareSelection.count)/2)")
+                            .font(.system(size: 13, design: .rounded))
+                            .foregroundColor(textSecondary)
+                    }
+
                     // Top N cards with staggered animation
                     ForEach(Array(viewModel.sortedCandidates.prefix(viewModel.topN).enumerated()), id: \.element.id) { index, candidate in
-                        ResultCardView(candidate: candidate, rank: index + 1)
+                        candidateCard(candidate: candidate, rank: index + 1)
                             .opacity(showResults ? 1 : 0)
                             .offset(y: showResults ? 0 : 40)
                             .animation(
@@ -509,6 +528,60 @@ struct ContentView: View {
                         .shadow(color: Color.black.opacity(0.06), radius: 6, y: 2)
                     }
                 }
+            }
+        }
+    }
+
+    private var compareToggleButton: some View {
+        Button {
+            withAnimation(.easeInOut(duration: 0.2)) {
+                viewModel.toggleCompareMode()
+            }
+        } label: {
+            HStack(spacing: 8) {
+                Image(systemName: viewModel.isCompareMode ? "xmark" : "rectangle.on.rectangle")
+                    .font(.system(size: 14, weight: .semibold))
+                Text(viewModel.isCompareMode ? "비교 모드 해제" : "사진 비교하기")
+                    .font(.system(size: 14, weight: .semibold, design: .rounded))
+            }
+            .foregroundColor(viewModel.isCompareMode ? .white : Color.pink)
+            .padding(.horizontal, 16)
+            .padding(.vertical, 10)
+            .background(
+                Capsule().fill(
+                    viewModel.isCompareMode
+                    ? AnyShapeStyle(LinearGradient(colors: [Color.pink, Color.pink.opacity(0.8)], startPoint: .leading, endPoint: .trailing))
+                    : AnyShapeStyle(Color.pink.opacity(0.1))
+                )
+            )
+        }
+    }
+
+    private func candidateCard(candidate: PhotoCandidate, rank: Int) -> some View {
+        ZStack(alignment: .topTrailing) {
+            ResultCardView(candidate: candidate, rank: rank)
+                .onTapGesture {
+                    guard viewModel.isCompareMode else { return }
+                    withAnimation(.easeInOut(duration: 0.2)) {
+                        viewModel.toggleCompareSelection(candidate)
+                    }
+                }
+
+            if viewModel.isCompareMode {
+                let isSelected = viewModel.isSelectedForCompare(candidate)
+                ZStack {
+                    Circle()
+                        .fill(isSelected ? Color.pink : Color.white.opacity(0.8))
+                        .frame(width: 30, height: 30)
+                        .shadow(color: Color.black.opacity(0.15), radius: 3, y: 1)
+
+                    if isSelected {
+                        Image(systemName: "checkmark")
+                            .font(.system(size: 14, weight: .bold))
+                            .foregroundColor(.white)
+                    }
+                }
+                .padding(16)
             }
         }
     }
