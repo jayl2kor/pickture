@@ -386,6 +386,7 @@ struct ContentView: View {
             )
             .foregroundColor(isEnabled ? .white : textTertiary)
         }
+        .accessibilityLabel(isEnabled ? "분석 시작" : "분석 시작 불가, 사진을 더 선택해주세요")
         .disabled(!isEnabled)
         .onAppear {
             withAnimation(.easeInOut(duration: 1.5).repeatForever(autoreverses: true)) {

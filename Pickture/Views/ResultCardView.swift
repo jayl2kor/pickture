@@ -47,6 +47,8 @@ private struct ScoreBar: View {
                 .foregroundColor(color)
                 .frame(width: 28, alignment: .trailing)
         }
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("\(label) \(Int(score * 100))점")
         .onAppear {
             withAnimation(.easeOut(duration: 0.8).delay(0.1)) {
                 animatedScore = score
@@ -254,6 +256,8 @@ struct ResultCardView: View {
         )
         .clipShape(RoundedRectangle(cornerRadius: 20))
         .shadow(color: Color(red: 0.6, green: 0.4, blue: 0.7).opacity(0.15), radius: 12, y: 6)
+        .accessibilityElement(children: .contain)
+        .accessibilityLabel("\(rank)위 사진, 총점 \(Int((candidate.scores?.totalScore ?? 0) * 100))점")
     }
 
     private func scoreColor(_ score: Double) -> Color {
