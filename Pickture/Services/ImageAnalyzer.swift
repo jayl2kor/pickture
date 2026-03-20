@@ -16,7 +16,7 @@ final class ImageAnalyzer {
             await MainActor.run { progress(index + 1, total) }
         }
 
-        return candidates.sorted { ($0.scores?.totalScore ?? 0) > ($1.scores?.totalScore ?? 0) }
+        return candidates
     }
 
     private func analyzeOnBackground(_ image: UIImage) async -> AnalysisScores {
@@ -56,9 +56,19 @@ final class ImageAnalyzer {
         let sharpness = measureSharpness(ciImage)
         let exposure = measureExposure(ciImage)
 
-        let faceObservations = detectFaces(cgImage)
-        let faceQuality = measureFaceQuality(cgImage)
-        let eyesOpen = measureEyesOpen(cgImage)
+        // Batch all Vision requests to share face detection pass
+        let faceRectsRequest = VNDetectFaceRectanglesRequest()
+        let faceQualityRequest = VNDetectFaceCaptureQualityRequest()
+        let faceLandmarksRequest = VNDetectFaceLandmarksRequest()
+        let handler = VNImageRequestHandler(cgImage: cgImage, options: [:])
+        try? handler.perform([faceRectsRequest, faceQualityRequest, faceLandmarksRequest])
+
+        let faceObservations = faceRectsRequest.results ?? []
+        let faceQuality = (faceQualityRequest.results ?? [])
+            .compactMap { $0.faceCaptureQuality }
+            .map { Double($0) }
+            .reduce(0, +) / max(Double((faceQualityRequest.results ?? []).count), 1)
+        let eyesOpen = measureEyesOpenFrom(faceLandmarksRequest.results ?? [], imageSize: CGSize(width: cgImage.width, height: cgImage.height))
         let composition = measureComposition(faceObservations, imageSize: image.size)
 
         return AnalysisScores(
@@ -151,14 +161,9 @@ final class ImageAnalyzer {
 
     // MARK: - Eyes Open
 
-    private func measureEyesOpen(_ cgImage: CGImage) -> Double {
-        let request = VNDetectFaceLandmarksRequest()
-        let handler = VNImageRequestHandler(cgImage: cgImage, options: [:])
-        try? handler.perform([request])
+    private func measureEyesOpenFrom(_ results: [VNFaceObservation], imageSize: CGSize) -> Double {
+        guard !results.isEmpty else { return 0 }
 
-        guard let results = request.results, !results.isEmpty else { return 0 }
-
-        let imageSize = CGSize(width: cgImage.width, height: cgImage.height)
         var eyeRatios: [Double] = []
 
         for face in results {

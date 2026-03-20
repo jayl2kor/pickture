@@ -41,11 +41,9 @@ struct ComparisonView: View {
 
                             Divider().padding(.horizontal, 8)
 
-                            compareRow(label: "선명도", leftScore: ls.sharpness, rightScore: rs.sharpness)
-                            compareRow(label: "얼굴 품질", leftScore: ls.faceQuality, rightScore: rs.faceQuality)
-                            compareRow(label: "눈 뜨임", leftScore: ls.eyesOpen, rightScore: rs.eyesOpen)
-                            compareRow(label: "노출", leftScore: ls.exposure, rightScore: rs.exposure)
-                            compareRow(label: "구도", leftScore: ls.composition, rightScore: rs.composition)
+                            ForEach(Array(zip(ls.details, rs.details)), id: \.0.0) { leftDetail, rightDetail in
+                                compareRow(label: leftDetail.0, leftScore: leftDetail.1, rightScore: rightDetail.1)
+                            }
                         }
                         .padding(16)
                         .background(

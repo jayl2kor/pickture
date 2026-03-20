@@ -13,7 +13,9 @@ final class PhotoViewModel: ObservableObject {
             }
         }
     }
-    @Published var candidates: [PhotoCandidate] = []
+    @Published var candidates: [PhotoCandidate] = [] {
+        didSet { updateSortedCandidates() }
+    }
     @Published var isLoading = false
     @Published var isAnalyzing = false
     @Published var progressCurrent = 0
@@ -23,13 +25,16 @@ final class PhotoViewModel: ObservableObject {
     @Published var showFavoriteError = false
     @Published var isFavoriting = false
     @Published var topN = 3
-    @Published var sortCriteria: SortCriteria = .totalScore
+    @Published var sortCriteria: SortCriteria = .totalScore {
+        didSet { updateSortedCandidates() }
+    }
     @Published var isCompareMode = false
     @Published var compareSelection: [PhotoCandidate] = []
     @Published var showComparison = false
+    @Published private(set) var sortedCandidates: [PhotoCandidate] = []
 
-    var sortedCandidates: [PhotoCandidate] {
-        candidates.sorted {
+    private func updateSortedCandidates() {
+        sortedCandidates = candidates.sorted {
             let s0 = $0.scores.map { sortCriteria.score(from: $0) } ?? 0
             let s1 = $1.scores.map { sortCriteria.score(from: $0) } ?? 0
             return s0 > s1

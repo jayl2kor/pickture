@@ -180,15 +180,13 @@ struct ResultCardView: View {
         rank == 1 ? 340 : 280
     }
 
-    private var scoreIconMap: [String: String] {
-        [
-            "선명도": "camera.aperture",
-            "얼굴 품질": "face.smiling",
-            "눈 뜨임": "eye",
-            "노출": "sun.max",
-            "구도": "squareshape.split.3x3"
-        ]
-    }
+    private static let scoreIconMap: [String: String] = [
+        "선명도": "camera.aperture",
+        "얼굴 품질": "face.smiling",
+        "눈 뜨임": "eye",
+        "노출": "sun.max",
+        "구도": "squareshape.split.3x3"
+    ]
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -250,7 +248,7 @@ struct ResultCardView: View {
                     ForEach(scores.details, id: \.0) { name, score in
                         ScoreBar(
                             label: name,
-                            icon: scoreIconMap[name] ?? "circle",
+                            icon: Self.scoreIconMap[name] ?? "circle",
                             score: score,
                             color: scoreColor(score)
                         )
