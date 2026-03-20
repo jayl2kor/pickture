@@ -514,44 +514,74 @@ struct ContentView: View {
     }
 
     private var topNHeader: some View {
-        HStack(spacing: 8) {
-            Rectangle()
-                .fill(
-                    LinearGradient(
-                        colors: [.clear, Color.pink.opacity(0.25)],
-                        startPoint: .leading,
-                        endPoint: .trailing
-                    )
-                )
-                .frame(height: 1)
-
-            HStack(spacing: 6) {
-                Image(systemName: "trophy.fill")
-                    .font(.system(size: 16, weight: .semibold))
-                    .foregroundStyle(
+        VStack(spacing: 12) {
+            HStack(spacing: 8) {
+                Rectangle()
+                    .fill(
                         LinearGradient(
-                            colors: [Color(red: 1.0, green: 0.7, blue: 0.3), Color(red: 1.0, green: 0.5, blue: 0.35)],
-                            startPoint: .top,
-                            endPoint: .bottom
+                            colors: [.clear, Color.pink.opacity(0.25)],
+                            startPoint: .leading,
+                            endPoint: .trailing
                         )
                     )
+                    .frame(height: 1)
 
-                Text("TOP \(viewModel.topN)")
-                    .font(.system(size: 15, weight: .bold, design: .rounded))
-                    .foregroundColor(textPrimary)
-                    .tracking(2)
-            }
-            .fixedSize()
+                HStack(spacing: 6) {
+                    Image(systemName: "trophy.fill")
+                        .font(.system(size: 16, weight: .semibold))
+                        .foregroundStyle(
+                            LinearGradient(
+                                colors: [Color(red: 1.0, green: 0.7, blue: 0.3), Color(red: 1.0, green: 0.5, blue: 0.35)],
+                                startPoint: .top,
+                                endPoint: .bottom
+                            )
+                        )
 
-            Rectangle()
-                .fill(
-                    LinearGradient(
-                        colors: [Color.pink.opacity(0.25), .clear],
-                        startPoint: .leading,
-                        endPoint: .trailing
+                    Text("TOP \(viewModel.topN)")
+                        .font(.system(size: 15, weight: .bold, design: .rounded))
+                        .foregroundColor(textPrimary)
+                        .tracking(2)
+                }
+                .fixedSize()
+
+                Rectangle()
+                    .fill(
+                        LinearGradient(
+                            colors: [Color.pink.opacity(0.25), .clear],
+                            startPoint: .leading,
+                            endPoint: .trailing
+                        )
                     )
+                    .frame(height: 1)
+            }
+
+            // Sort picker
+            Menu {
+                ForEach(SortCriteria.allCases, id: \.self) { criteria in
+                    Button {
+                        viewModel.sortCriteria = criteria
+                    } label: {
+                        if viewModel.sortCriteria == criteria {
+                            Label(criteria.rawValue, systemImage: "checkmark")
+                        } else {
+                            Text(criteria.rawValue)
+                        }
+                    }
+                }
+            } label: {
+                HStack(spacing: 6) {
+                    Image(systemName: "arrow.up.arrow.down")
+                        .font(.system(size: 12, weight: .semibold))
+                    Text(viewModel.sortCriteria.rawValue)
+                        .font(.system(size: 13, weight: .semibold, design: .rounded))
+                }
+                .foregroundColor(Color.pink)
+                .padding(.horizontal, 14)
+                .padding(.vertical, 8)
+                .background(
+                    Capsule().fill(Color.pink.opacity(0.1))
                 )
-                .frame(height: 1)
+            }
         }
         .padding(.vertical, 4)
     }
