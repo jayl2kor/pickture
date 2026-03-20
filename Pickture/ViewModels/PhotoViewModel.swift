@@ -21,6 +21,7 @@ final class PhotoViewModel: ObservableObject {
     @Published var isFavorited = false
     @Published var loadFailCount = 0
     @Published var showFavoriteError = false
+    @Published var isFavoriting = false
     @Published var topN = 3
     @Published var sortCriteria: SortCriteria = .totalScore
     @Published var isCompareMode = false
@@ -140,9 +141,11 @@ final class PhotoViewModel: ObservableObject {
         let identifiers = sortedCandidates.prefix(topN).compactMap(\.assetIdentifier)
         guard !identifiers.isEmpty else { return }
 
+        isFavoriting = true
         Task {
             let status = await PHPhotoLibrary.requestAuthorization(for: .readWrite)
             guard status == .authorized || status == .limited else {
+                isFavoriting = false
                 showFavoriteError = true
                 return
             }
@@ -157,8 +160,10 @@ final class PhotoViewModel: ObservableObject {
                         request.isFavorite = true
                     }
                 }
+                isFavoriting = false
                 isFavorited = true
             } catch {
+                isFavoriting = false
                 #if DEBUG
                 print("Failed to favorite: \(error)")
                 #endif

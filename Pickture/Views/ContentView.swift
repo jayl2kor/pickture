@@ -729,9 +729,15 @@ struct ContentView: View {
                 viewModel.favoriteTopN()
             } label: {
                 HStack(spacing: 10) {
-                    Image(systemName: viewModel.isFavorited ? "heart.fill" : "heart")
-                        .font(.system(size: 17, weight: .semibold))
-                    Text(viewModel.isFavorited ? "등록 완료" : "즐겨찾기")
+                    if viewModel.isFavoriting {
+                        ProgressView()
+                            .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                            .scaleEffect(0.8)
+                    } else {
+                        Image(systemName: viewModel.isFavorited ? "heart.fill" : "heart")
+                            .font(.system(size: 17, weight: .semibold))
+                    }
+                    Text(viewModel.isFavoriting ? "등록 중..." : viewModel.isFavorited ? "등록 완료" : "즐겨찾기")
                         .font(.system(size: 15, weight: .bold, design: .rounded))
                 }
                 .frame(maxWidth: .infinity)
@@ -746,7 +752,7 @@ struct ContentView: View {
                 )
                 .foregroundColor(viewModel.isFavorited ? Color.pink : .white)
             }
-            .disabled(viewModel.isFavorited)
+            .disabled(viewModel.isFavorited || viewModel.isFavoriting)
             .animation(.easeInOut(duration: 0.3), value: viewModel.isFavorited)
 
             Button {
@@ -855,5 +861,39 @@ struct ContentView: View {
         }
         .clipShape(RoundedRectangle(cornerRadius: 16))
         .shadow(color: Color.black.opacity(0.1), radius: 6, y: 3)
+        .overlay(alignment: .topTrailing) {
+            if viewModel.isCompareMode {
+                let isSelected = viewModel.isSelectedForCompare(candidate)
+                ZStack {
+                    Circle()
+                        .fill(isSelected ? Color.pink : Color.white.opacity(0.8))
+                        .frame(width: 28, height: 28)
+                        .shadow(color: Color.black.opacity(0.15), radius: 2, y: 1)
+                    if isSelected {
+                        Image(systemName: "checkmark")
+                            .font(.system(size: 12, weight: .bold))
+                            .foregroundColor(.white)
+                    } else {
+                        Circle()
+                            .stroke(Color.gray.opacity(0.3), lineWidth: 2)
+                            .frame(width: 28, height: 28)
+                    }
+                }
+                .padding(8)
+                .allowsHitTesting(false)
+            }
+        }
+        .if(viewModel.isCompareMode) { view in
+            view
+                .contentShape(Rectangle())
+                .onTapGesture {
+                    withAnimation(.easeInOut(duration: 0.2)) {
+                        viewModel.toggleCompareSelection(candidate)
+                    }
+                    UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                }
+        }
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("사진, 총점 \(Int((candidate.scores?.totalScore ?? 0) * 100))점")
     }
 }
