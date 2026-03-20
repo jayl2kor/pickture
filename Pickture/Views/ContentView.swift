@@ -4,6 +4,7 @@ import PhotosUI
 struct ContentView: View {
     @StateObject private var viewModel = PhotoViewModel()
     @State private var pulseAnalyze = false
+    @State private var showResults = false
 
     // Warm pink-coral accent
     private let accentGradient = LinearGradient(
@@ -64,8 +65,15 @@ struct ContentView: View {
         #endif
         .onChange(of: viewModel.isAnalyzing) { newValue in
             if !newValue && !viewModel.candidates.isEmpty {
-                withAnimation(.spring(response: 0.6, dampingFraction: 0.8)) {}
+                showResults = false
+                withAnimation(.spring(response: 0.6, dampingFraction: 0.8)) {
+                    showResults = true
+                }
+                UIImpactFeedbackGenerator(style: .medium).impactOccurred()
             }
+        }
+        .onChange(of: viewModel.candidates.count) { newCount in
+            if newCount == 0 { showResults = false }
         }
     }
 
@@ -430,13 +438,16 @@ struct ContentView: View {
                     topNHeader
                         .transition(.opacity.combined(with: .move(edge: .top)))
 
-                    // Top N cards
+                    // Top N cards with staggered animation
                     ForEach(Array(viewModel.candidates.prefix(viewModel.topN).enumerated()), id: \.element.id) { index, candidate in
                         ResultCardView(candidate: candidate, rank: index + 1)
-                            .transition(.asymmetric(
-                                insertion: .opacity.combined(with: .offset(y: 30)),
-                                removal: .opacity
-                            ))
+                            .opacity(showResults ? 1 : 0)
+                            .offset(y: showResults ? 0 : 40)
+                            .animation(
+                                .spring(response: 0.6, dampingFraction: 0.8)
+                                .delay(Double(index) * 0.15),
+                                value: showResults
+                            )
                     }
 
                     // Favorite button
