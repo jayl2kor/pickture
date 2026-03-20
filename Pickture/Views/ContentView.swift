@@ -119,8 +119,38 @@ struct ContentView: View {
                 .multilineTextAlignment(.center)
                 .lineSpacing(3)
                 .padding(.top, 2)
+
+            if viewModel.selectedItems.isEmpty {
+                HStack(spacing: 16) {
+                    stepBubble(number: "1", text: "사진 선택")
+                    stepArrow
+                    stepBubble(number: "2", text: "AI 분석")
+                    stepArrow
+                    stepBubble(number: "3", text: "베스트 확인")
+                }
+                .padding(.top, 12)
+            }
         }
         .padding(.bottom, 8)
+    }
+
+    private func stepBubble(number: String, text: String) -> some View {
+        VStack(spacing: 4) {
+            Text(number)
+                .font(.system(size: 12, weight: .bold, design: .rounded))
+                .foregroundColor(.white)
+                .frame(width: 24, height: 24)
+                .background(Circle().fill(accentGradient))
+            Text(text)
+                .font(.system(size: 11, weight: .medium, design: .rounded))
+                .foregroundColor(textSecondary)
+        }
+    }
+
+    private var stepArrow: some View {
+        Image(systemName: "chevron.right")
+            .font(.system(size: 10, weight: .bold))
+            .foregroundColor(textTertiary)
     }
 
     // MARK: - Photo Selection
