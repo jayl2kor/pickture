@@ -1,6 +1,17 @@
 import SwiftUI
 import PhotosUI
 
+private extension View {
+    @ViewBuilder
+    func `if`<Content: View>(_ condition: Bool, transform: (Self) -> Content) -> some View {
+        if condition {
+            transform(self)
+        } else {
+            self
+        }
+    }
+}
+
 struct ContentView: View {
     @StateObject private var viewModel = PhotoViewModel()
     @State private var pulseAnalyze = false
@@ -589,13 +600,15 @@ struct ContentView: View {
                 .allowsHitTesting(false)
             }
         }
-        .contentShape(Rectangle())
-        .onTapGesture {
-            guard viewModel.isCompareMode else { return }
-            withAnimation(.easeInOut(duration: 0.2)) {
-                viewModel.toggleCompareSelection(candidate)
-            }
-            UIImpactFeedbackGenerator(style: .light).impactOccurred()
+        .if(viewModel.isCompareMode) { view in
+            view
+                .contentShape(Rectangle())
+                .onTapGesture {
+                    withAnimation(.easeInOut(duration: 0.2)) {
+                        viewModel.toggleCompareSelection(candidate)
+                    }
+                    UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                }
         }
     }
 
@@ -664,8 +677,8 @@ struct ContentView: View {
                         .font(.system(size: 13, weight: .semibold, design: .rounded))
                 }
                 .foregroundColor(Color.pink)
-                .padding(.horizontal, 14)
-                .padding(.vertical, 8)
+                .padding(.horizontal, 16)
+                .padding(.vertical, 12)
                 .background(
                     Capsule().fill(Color.pink.opacity(0.1))
                 )
