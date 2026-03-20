@@ -559,7 +559,9 @@ struct ContentView: View {
             Menu {
                 ForEach(SortCriteria.allCases, id: \.self) { criteria in
                     Button {
-                        viewModel.sortCriteria = criteria
+                        withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
+                            viewModel.sortCriteria = criteria
+                        }
                     } label: {
                         if viewModel.sortCriteria == criteria {
                             Label(criteria.rawValue, systemImage: "checkmark")
