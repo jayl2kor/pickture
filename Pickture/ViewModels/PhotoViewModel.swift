@@ -13,6 +13,7 @@ final class PhotoViewModel: ObservableObject {
     @Published var progressCurrent = 0
     @Published var progressTotal = 0
     @Published var isFavorited = false
+    @Published var topN = 3
 
     private let analyzer = ImageAnalyzer()
 
@@ -20,10 +21,11 @@ final class PhotoViewModel: ObservableObject {
         selectedItems = []
         candidates = []
         isFavorited = false
+        topN = 3
     }
 
     func loadAndAnalyze() {
-        guard selectedItems.count >= 4 else { return }
+        guard selectedItems.count > topN else { return }
 
         Task {
             isLoading = true
@@ -66,8 +68,8 @@ final class PhotoViewModel: ObservableObject {
         #endif
     }
 
-    func favoriteTop3() {
-        let identifiers = candidates.prefix(3).compactMap(\.assetIdentifier)
+    func favoriteTopN() {
+        let identifiers = candidates.prefix(topN).compactMap(\.assetIdentifier)
         guard !identifiers.isEmpty else { return }
 
         Task {

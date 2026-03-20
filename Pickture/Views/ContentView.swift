@@ -31,6 +31,10 @@ struct ContentView: View {
                         headerSection
                         selectionSection
                             .padding(.top, 8)
+                        if !viewModel.selectedItems.isEmpty {
+                            topNSelector
+                                .padding(.top, 16)
+                        }
                         analyzeSection
                             .padding(.top, 24)
                     }
@@ -284,8 +288,65 @@ struct ContentView: View {
         )
     }
 
+    private var topNSelector: some View {
+        HStack(spacing: 0) {
+            VStack(alignment: .leading, spacing: 2) {
+                Text("선별 장수")
+                    .font(.system(size: 15, weight: .semibold))
+                    .foregroundColor(.white.opacity(0.85))
+                Text("상위 몇 장을 선별할지 선택하세요")
+                    .font(.system(size: 12))
+                    .foregroundColor(.white.opacity(0.35))
+            }
+
+            Spacer()
+
+            HStack(spacing: 0) {
+                Button {
+                    if viewModel.topN > 1 { viewModel.topN -= 1 }
+                } label: {
+                    Image(systemName: "minus")
+                        .font(.system(size: 14, weight: .bold))
+                        .foregroundColor(viewModel.topN > 1 ? .white : .white.opacity(0.2))
+                        .frame(width: 36, height: 36)
+                }
+                .disabled(viewModel.topN <= 1)
+
+                Text("\(viewModel.topN)")
+                    .font(.system(size: 18, weight: .bold, design: .rounded))
+                    .foregroundColor(.white)
+                    .frame(width: 36, height: 36)
+
+                Button {
+                    let maxN = max(viewModel.selectedItems.count - 1, 1)
+                    if viewModel.topN < maxN { viewModel.topN += 1 }
+                } label: {
+                    Image(systemName: "plus")
+                        .font(.system(size: 14, weight: .bold))
+                        .foregroundColor(viewModel.topN < viewModel.selectedItems.count - 1 ? .white : .white.opacity(0.2))
+                        .frame(width: 36, height: 36)
+                }
+                .disabled(viewModel.topN >= viewModel.selectedItems.count - 1)
+            }
+            .background(
+                RoundedRectangle(cornerRadius: 12)
+                    .fill(Color.white.opacity(0.08))
+            )
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 14)
+        .background(
+            RoundedRectangle(cornerRadius: 16)
+                .fill(Color.white.opacity(0.06))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 16)
+                .stroke(Color.white.opacity(0.08), lineWidth: 1)
+        )
+    }
+
     private var analyzeButton: some View {
-        let isEnabled = viewModel.selectedItems.count >= 4
+        let isEnabled = viewModel.selectedItems.count > viewModel.topN
 
         return Button {
             viewModel.loadAndAnalyze()
@@ -365,12 +426,12 @@ struct ContentView: View {
                         )
                     }
 
-                    // TOP 3 Header
-                    top3Header
+                    // TOP N Header
+                    topNHeader
                         .transition(.opacity.combined(with: .move(edge: .top)))
 
-                    // Top 3 cards
-                    ForEach(Array(viewModel.candidates.prefix(3).enumerated()), id: \.element.id) { index, candidate in
+                    // Top N cards
+                    ForEach(Array(viewModel.candidates.prefix(viewModel.topN).enumerated()), id: \.element.id) { index, candidate in
                         ResultCardView(candidate: candidate, rank: index + 1)
                             .transition(.asymmetric(
                                 insertion: .opacity.combined(with: .offset(y: 30)),
@@ -382,7 +443,7 @@ struct ContentView: View {
                     favoriteButton
 
                     // The rest
-                    if viewModel.candidates.count > 3 {
+                    if viewModel.candidates.count > viewModel.topN {
                         remainingSection
                     }
                 }
@@ -390,7 +451,7 @@ struct ContentView: View {
         }
     }
 
-    private var top3Header: some View {
+    private var topNHeader: some View {
         HStack(spacing: 8) {
             // Decorative line
             Rectangle()
@@ -414,7 +475,7 @@ struct ContentView: View {
                         )
                     )
 
-                Text("TOP 3")
+                Text("TOP \(viewModel.topN)")
                     .font(.system(size: 15, weight: .bold, design: .rounded))
                     .foregroundColor(.white.opacity(0.85))
                     .tracking(2)
@@ -436,13 +497,13 @@ struct ContentView: View {
 
     private var favoriteButton: some View {
         Button {
-            viewModel.favoriteTop3()
+            viewModel.favoriteTopN()
         } label: {
             HStack(spacing: 10) {
                 Image(systemName: viewModel.isFavorited ? "heart.fill" : "heart")
                     .font(.system(size: 17, weight: .semibold))
 
-                Text(viewModel.isFavorited ? "즐겨찾기 등록 완료" : "TOP 3 즐겨찾기 등록")
+                Text(viewModel.isFavorited ? "즐겨찾기 등록 완료" : "TOP \(viewModel.topN) 즐겨찾기 등록")
                     .font(.system(size: 17, weight: .bold))
             }
             .frame(maxWidth: .infinity)
@@ -496,7 +557,7 @@ struct ContentView: View {
                 GridItem(.flexible(), spacing: 12),
                 GridItem(.flexible(), spacing: 12)
             ], spacing: 12) {
-                ForEach(Array(viewModel.candidates.dropFirst(3).enumerated()), id: \.element.id) { _, candidate in
+                ForEach(Array(viewModel.candidates.dropFirst(viewModel.topN).enumerated()), id: \.element.id) { _, candidate in
                     remainingCard(candidate: candidate)
                 }
             }
