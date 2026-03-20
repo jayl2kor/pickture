@@ -5,20 +5,30 @@ struct ContentView: View {
     @StateObject private var viewModel = PhotoViewModel()
     @State private var pulseAnalyze = false
 
-    // Accent gradient used throughout the app
+    // Warm pink-coral accent
     private let accentGradient = LinearGradient(
-        colors: [Color(red: 0.4, green: 0.35, blue: 1.0), Color(red: 0.7, green: 0.3, blue: 0.95)],
+        colors: [Color(red: 1.0, green: 0.45, blue: 0.55), Color(red: 1.0, green: 0.6, blue: 0.4)],
         startPoint: .leading,
         endPoint: .trailing
     )
 
+    // Text colors
+    private let textPrimary = Color(red: 0.2, green: 0.15, blue: 0.25)
+    private let textSecondary = Color(red: 0.45, green: 0.4, blue: 0.5)
+    private let textTertiary = Color(red: 0.55, green: 0.50, blue: 0.58)
+
+    // Card / surface
+    private let cardFill = Color.white
+    private let surfaceFill = Color(red: 0.96, green: 0.94, blue: 0.98)
+
     var body: some View {
         ZStack {
+            // Warm cream → blush → lavender background
             LinearGradient(
                 colors: [
-                    Color(red: 0.09, green: 0.08, blue: 0.20),
-                    Color(red: 0.11, green: 0.09, blue: 0.22),
-                    Color(red: 0.07, green: 0.07, blue: 0.16)
+                    Color(red: 1.0, green: 0.97, blue: 0.95),
+                    Color(red: 0.98, green: 0.94, blue: 0.97),
+                    Color(red: 0.95, green: 0.93, blue: 0.99)
                 ],
                 startPoint: .top,
                 endPoint: .bottom
@@ -30,7 +40,7 @@ struct ContentView: View {
                     if viewModel.candidates.isEmpty {
                         headerSection
                         selectionSection
-                            .padding(.top, 8)
+                            .padding(.top, 16)
                         if !viewModel.selectedItems.isEmpty {
                             topNSelector
                                 .padding(.top, 16)
@@ -45,7 +55,6 @@ struct ContentView: View {
                 .padding(.bottom, 40)
             }
         }
-        .preferredColorScheme(.dark)
         #if DEBUG
         .onAppear {
             if CommandLine.arguments.contains("--auto-test") {
@@ -54,11 +63,8 @@ struct ContentView: View {
         }
         #endif
         .onChange(of: viewModel.isAnalyzing) { newValue in
-            // When analysis finishes (isAnalyzing goes from true to false)
             if !newValue && !viewModel.candidates.isEmpty {
-                withAnimation(.spring(response: 0.6, dampingFraction: 0.8)) {
-                    // triggers resultsSection animation
-                }
+                withAnimation(.spring(response: 0.6, dampingFraction: 0.8)) {}
             }
         }
     }
@@ -67,7 +73,6 @@ struct ContentView: View {
 
     private var headerSection: some View {
         VStack(spacing: 8) {
-            // Decorative top element
             HStack(spacing: 6) {
                 Image(systemName: "sparkles")
                     .font(.system(size: 14, weight: .medium))
@@ -75,8 +80,8 @@ struct ContentView: View {
 
                 Text("AI Photo Selector")
                     .font(.system(size: 13, weight: .semibold, design: .rounded))
-                    .foregroundColor(.white.opacity(0.4))
-                    .tracking(2)
+                    .foregroundColor(textTertiary)
+                    .tracking(1.5)
                     .textCase(.uppercase)
 
                 Image(systemName: "sparkles")
@@ -86,12 +91,12 @@ struct ContentView: View {
             .padding(.top, 16)
 
             Text("베스트 사진 선별")
-                .font(.system(size: 28, weight: .bold))
-                .foregroundColor(.white)
+                .font(.system(size: 32, weight: .bold, design: .rounded))
+                .foregroundColor(textPrimary)
 
             Text("여러 장의 인물 사진 중 가장 잘 나온 사진을\nAI가 자동으로 골라드립니다")
-                .font(.system(size: 14))
-                .foregroundColor(.white.opacity(0.45))
+                .font(.system(size: 15, design: .rounded))
+                .foregroundColor(textSecondary)
                 .multilineTextAlignment(.center)
                 .lineSpacing(3)
                 .padding(.top, 2)
@@ -109,45 +114,56 @@ struct ContentView: View {
                 matching: .images
             ) {
                 if viewModel.selectedItems.isEmpty {
-                    // Empty state - dashed border card
                     VStack(spacing: 12) {
                         ZStack {
                             Circle()
-                                .fill(Color.white.opacity(0.06))
-                                .frame(width: 64, height: 64)
+                                .fill(
+                                    LinearGradient(
+                                        colors: [Color.pink.opacity(0.12), Color.orange.opacity(0.08)],
+                                        startPoint: .topLeading,
+                                        endPoint: .bottomTrailing
+                                    )
+                                )
+                                .frame(width: 72, height: 72)
 
                             Image(systemName: "photo.on.rectangle.angled")
-                                .font(.system(size: 26, weight: .medium))
+                                .font(.system(size: 28, weight: .medium))
                                 .foregroundStyle(accentGradient)
                         }
 
                         Text("사진 선택하기")
-                            .font(.system(size: 16, weight: .semibold))
-                            .foregroundColor(.white.opacity(0.85))
+                            .font(.system(size: 16, weight: .semibold, design: .rounded))
+                            .foregroundColor(textPrimary)
 
-                        Text("4장 이상의 인물 사진을 선택해주세요")
-                            .font(.system(size: 13))
-                            .foregroundColor(.white.opacity(0.35))
+                        Text("인물 사진을 여러 장 선택해주세요")
+                            .font(.system(size: 13, design: .rounded))
+                            .foregroundColor(textTertiary)
                     }
                     .frame(maxWidth: .infinity)
                     .frame(height: 180)
                     .background(
                         RoundedRectangle(cornerRadius: 20)
-                            .fill(Color.white.opacity(0.03))
+                            .fill(cardFill)
                     )
                     .overlay(
                         RoundedRectangle(cornerRadius: 20)
                             .strokeBorder(
                                 style: StrokeStyle(lineWidth: 1.5, dash: [8, 6])
                             )
-                            .foregroundColor(.white.opacity(0.12))
+                            .foregroundStyle(
+                                LinearGradient(
+                                    colors: [Color.pink.opacity(0.4), Color.orange.opacity(0.3)],
+                                    startPoint: .topLeading,
+                                    endPoint: .bottomTrailing
+                                )
+                            )
                     )
+                    .shadow(color: Color.pink.opacity(0.08), radius: 12, y: 4)
                 } else {
-                    // Has selection - compact button with count
                     HStack(spacing: 12) {
                         ZStack {
                             Circle()
-                                .fill(Color.white.opacity(0.06))
+                                .fill(Color.pink.opacity(0.1))
                                 .frame(width: 44, height: 44)
 
                             Image(systemName: "photo.on.rectangle.angled")
@@ -157,28 +173,24 @@ struct ContentView: View {
 
                         VStack(alignment: .leading, spacing: 2) {
                             Text("사진 선택됨")
-                                .font(.system(size: 15, weight: .semibold))
-                                .foregroundColor(.white.opacity(0.85))
+                                .font(.system(size: 15, weight: .semibold, design: .rounded))
+                                .foregroundColor(textPrimary)
                             Text("탭하여 변경하기")
-                                .font(.system(size: 12))
-                                .foregroundColor(.white.opacity(0.35))
+                                .font(.system(size: 12, design: .rounded))
+                                .foregroundColor(textTertiary)
                         }
 
                         Spacer()
 
-                        // Count pill badge
                         countBadge
                     }
                     .padding(.horizontal, 16)
                     .padding(.vertical, 14)
                     .background(
                         RoundedRectangle(cornerRadius: 16)
-                            .fill(Color.white.opacity(0.06))
+                            .fill(cardFill)
                     )
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 16)
-                            .stroke(Color.white.opacity(0.08), lineWidth: 1)
-                    )
+                    .shadow(color: Color.pink.opacity(0.08), radius: 8, y: 3)
                 }
             }
         }
@@ -190,22 +202,16 @@ struct ContentView: View {
                 .font(.system(size: 18, weight: .bold, design: .rounded))
                 .foregroundColor(.white)
             Text("장")
-                .font(.system(size: 12, weight: .medium))
-                .foregroundColor(.white.opacity(0.7))
+                .font(.system(size: 12, weight: .medium, design: .rounded))
+                .foregroundColor(.white.opacity(0.85))
         }
         .padding(.horizontal, 14)
         .padding(.vertical, 8)
         .background(
             Capsule()
-                .fill(
-                    LinearGradient(
-                        colors: [Color(red: 0.4, green: 0.35, blue: 1.0), Color(red: 0.7, green: 0.3, blue: 0.95)],
-                        startPoint: .leading,
-                        endPoint: .trailing
-                    )
-                )
+                .fill(accentGradient)
         )
-        .shadow(color: Color(red: 0.5, green: 0.3, blue: 1.0).opacity(0.3), radius: 8, y: 2)
+        .shadow(color: Color.pink.opacity(0.2), radius: 5, y: 2)
     }
 
     // MARK: - Analyze Section
@@ -217,7 +223,6 @@ struct ContentView: View {
             } else if viewModel.isAnalyzing {
                 analyzingView
             } else if !viewModel.candidates.isEmpty {
-                // Analysis done, don't show button
                 EmptyView()
             } else {
                 analyzeButton
@@ -228,12 +233,12 @@ struct ContentView: View {
     private var loadingView: some View {
         VStack(spacing: 16) {
             ProgressView()
-                .progressViewStyle(CircularProgressViewStyle(tint: .white.opacity(0.6)))
+                .progressViewStyle(CircularProgressViewStyle(tint: Color.pink))
                 .scaleEffect(1.2)
 
             Text("사진 불러오는 중...")
-                .font(.system(size: 14, weight: .medium))
-                .foregroundColor(.white.opacity(0.5))
+                .font(.system(size: 14, weight: .medium, design: .rounded))
+                .foregroundColor(textSecondary)
         }
         .frame(maxWidth: .infinity)
         .padding(.vertical, 32)
@@ -245,20 +250,15 @@ struct ContentView: View {
         let percentage = Int(progress * 100)
 
         return VStack(spacing: 20) {
-            // Circular progress
             ZStack {
                 Circle()
-                    .stroke(Color.white.opacity(0.06), lineWidth: 6)
+                    .stroke(Color.pink.opacity(0.12), lineWidth: 6)
                     .frame(width: 80, height: 80)
 
                 Circle()
                     .trim(from: 0, to: progress)
                     .stroke(
-                        LinearGradient(
-                            colors: [Color(red: 0.4, green: 0.35, blue: 1.0), Color(red: 0.7, green: 0.3, blue: 0.95)],
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
-                        ),
+                        accentGradient,
                         style: StrokeStyle(lineWidth: 6, lineCap: .round)
                     )
                     .frame(width: 80, height: 80)
@@ -267,36 +267,50 @@ struct ContentView: View {
 
                 Text("\(percentage)%")
                     .font(.system(size: 18, weight: .bold, design: .rounded))
-                    .foregroundColor(.white)
+                    .foregroundColor(textPrimary)
             }
 
             VStack(spacing: 4) {
                 Text("분석 중")
-                    .font(.system(size: 16, weight: .semibold))
-                    .foregroundColor(.white.opacity(0.8))
+                    .font(.system(size: 16, weight: .semibold, design: .rounded))
+                    .foregroundColor(textPrimary)
 
                 Text("\(viewModel.progressCurrent) / \(viewModel.progressTotal)장 완료")
-                    .font(.system(size: 13))
-                    .foregroundColor(.white.opacity(0.4))
+                    .font(.system(size: 13, design: .rounded))
+                    .foregroundColor(textTertiary)
+            }
+
+            Button {
+                viewModel.cancelAnalysis()
+            } label: {
+                Text("취소")
+                    .font(.system(size: 14, weight: .semibold, design: .rounded))
+                    .foregroundColor(textSecondary)
+                    .padding(.horizontal, 24)
+                    .padding(.vertical, 10)
+                    .background(
+                        Capsule().fill(Color.gray.opacity(0.12))
+                    )
             }
         }
         .frame(maxWidth: .infinity)
         .padding(.vertical, 28)
         .background(
             RoundedRectangle(cornerRadius: 20)
-                .fill(Color.white.opacity(0.04))
+                .fill(cardFill)
         )
+        .shadow(color: Color.pink.opacity(0.06), radius: 10, y: 4)
     }
 
     private var topNSelector: some View {
         HStack(spacing: 0) {
             VStack(alignment: .leading, spacing: 2) {
                 Text("선별 장수")
-                    .font(.system(size: 15, weight: .semibold))
-                    .foregroundColor(.white.opacity(0.85))
+                    .font(.system(size: 15, weight: .semibold, design: .rounded))
+                    .foregroundColor(textPrimary)
                 Text("상위 몇 장을 선별할지 선택하세요")
-                    .font(.system(size: 12))
-                    .foregroundColor(.white.opacity(0.35))
+                    .font(.system(size: 12, design: .rounded))
+                    .foregroundColor(textTertiary)
             }
 
             Spacer()
@@ -307,15 +321,15 @@ struct ContentView: View {
                 } label: {
                     Image(systemName: "minus")
                         .font(.system(size: 14, weight: .bold))
-                        .foregroundColor(viewModel.topN > 1 ? .white : .white.opacity(0.2))
-                        .frame(width: 36, height: 36)
+                        .foregroundColor(viewModel.topN > 1 ? Color.pink : textTertiary.opacity(0.4))
+                        .frame(width: 44, height: 44)
                 }
                 .disabled(viewModel.topN <= 1)
 
                 Text("\(viewModel.topN)")
                     .font(.system(size: 18, weight: .bold, design: .rounded))
-                    .foregroundColor(.white)
-                    .frame(width: 36, height: 36)
+                    .foregroundColor(textPrimary)
+                    .frame(width: 36, height: 44)
 
                 Button {
                     let maxN = max(viewModel.selectedItems.count - 1, 1)
@@ -323,26 +337,23 @@ struct ContentView: View {
                 } label: {
                     Image(systemName: "plus")
                         .font(.system(size: 14, weight: .bold))
-                        .foregroundColor(viewModel.topN < viewModel.selectedItems.count - 1 ? .white : .white.opacity(0.2))
-                        .frame(width: 36, height: 36)
+                        .foregroundColor(viewModel.topN < viewModel.selectedItems.count - 1 ? Color.pink : textTertiary.opacity(0.4))
+                        .frame(width: 44, height: 44)
                 }
                 .disabled(viewModel.topN >= viewModel.selectedItems.count - 1)
             }
             .background(
                 RoundedRectangle(cornerRadius: 12)
-                    .fill(Color.white.opacity(0.08))
+                    .fill(Color.pink.opacity(0.08))
             )
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 14)
         .background(
             RoundedRectangle(cornerRadius: 16)
-                .fill(Color.white.opacity(0.06))
+                .fill(cardFill)
         )
-        .overlay(
-            RoundedRectangle(cornerRadius: 16)
-                .stroke(Color.white.opacity(0.08), lineWidth: 1)
-        )
+        .shadow(color: Color.pink.opacity(0.06), radius: 8, y: 3)
     }
 
     private var analyzeButton: some View {
@@ -356,7 +367,7 @@ struct ContentView: View {
                     .font(.system(size: 17, weight: .semibold))
 
                 Text("분석 시작")
-                    .font(.system(size: 17, weight: .bold))
+                    .font(.system(size: 17, weight: .bold, design: .rounded))
             }
             .frame(maxWidth: .infinity)
             .padding(.vertical, 16)
@@ -364,25 +375,16 @@ struct ContentView: View {
                 Group {
                     if isEnabled {
                         RoundedRectangle(cornerRadius: 16)
-                            .fill(
-                                LinearGradient(
-                                    colors: [
-                                        Color(red: 0.4, green: 0.35, blue: 1.0),
-                                        Color(red: 0.65, green: 0.3, blue: 0.95)
-                                    ],
-                                    startPoint: .leading,
-                                    endPoint: .trailing
-                                )
-                            )
-                            .shadow(color: Color(red: 0.5, green: 0.3, blue: 1.0).opacity(0.4), radius: 16, y: 4)
+                            .fill(accentGradient)
+                            .shadow(color: Color.pink.opacity(0.35), radius: 16, y: 4)
                             .scaleEffect(pulseAnalyze ? 1.02 : 1.0)
                     } else {
                         RoundedRectangle(cornerRadius: 16)
-                            .fill(Color.white.opacity(0.08))
+                            .fill(Color.gray.opacity(0.22))
                     }
                 }
             )
-            .foregroundColor(isEnabled ? .white : .white.opacity(0.3))
+            .foregroundColor(isEnabled ? .white : textTertiary)
         }
         .disabled(!isEnabled)
         .onAppear {
@@ -411,19 +413,16 @@ struct ContentView: View {
                             Image(systemName: "arrow.counterclockwise")
                                 .font(.system(size: 15, weight: .semibold))
                             Text("처음부터 다시 하기")
-                                .font(.system(size: 15, weight: .semibold))
+                                .font(.system(size: 15, weight: .semibold, design: .rounded))
                         }
-                        .foregroundColor(.white.opacity(0.85))
+                        .foregroundColor(textSecondary)
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 14)
                         .background(
-                            Capsule()
-                                .fill(Color.white.opacity(0.1))
+                            RoundedRectangle(cornerRadius: 16)
+                                .fill(cardFill)
                         )
-                        .overlay(
-                            Capsule()
-                                .stroke(Color.white.opacity(0.12), lineWidth: 1)
-                        )
+                        .shadow(color: Color.black.opacity(0.06), radius: 6, y: 2)
                     }
 
                     // TOP N Header
@@ -453,11 +452,10 @@ struct ContentView: View {
 
     private var topNHeader: some View {
         HStack(spacing: 8) {
-            // Decorative line
             Rectangle()
                 .fill(
                     LinearGradient(
-                        colors: [.clear, Color.white.opacity(0.15)],
+                        colors: [.clear, Color.pink.opacity(0.25)],
                         startPoint: .leading,
                         endPoint: .trailing
                     )
@@ -466,10 +464,10 @@ struct ContentView: View {
 
             HStack(spacing: 6) {
                 Image(systemName: "trophy.fill")
-                    .font(.system(size: 14, weight: .semibold))
+                    .font(.system(size: 16, weight: .semibold))
                     .foregroundStyle(
                         LinearGradient(
-                            colors: [Color(red: 1.0, green: 0.84, blue: 0.3), Color(red: 0.95, green: 0.7, blue: 0.1)],
+                            colors: [Color(red: 1.0, green: 0.7, blue: 0.3), Color(red: 1.0, green: 0.5, blue: 0.35)],
                             startPoint: .top,
                             endPoint: .bottom
                         )
@@ -477,7 +475,7 @@ struct ContentView: View {
 
                 Text("TOP \(viewModel.topN)")
                     .font(.system(size: 15, weight: .bold, design: .rounded))
-                    .foregroundColor(.white.opacity(0.85))
+                    .foregroundColor(textPrimary)
                     .tracking(2)
             }
             .fixedSize()
@@ -485,7 +483,7 @@ struct ContentView: View {
             Rectangle()
                 .fill(
                     LinearGradient(
-                        colors: [Color.white.opacity(0.15), .clear],
+                        colors: [Color.pink.opacity(0.25), .clear],
                         startPoint: .leading,
                         endPoint: .trailing
                     )
@@ -504,7 +502,7 @@ struct ContentView: View {
                     .font(.system(size: 17, weight: .semibold))
 
                 Text(viewModel.isFavorited ? "즐겨찾기 등록 완료" : "TOP \(viewModel.topN) 즐겨찾기 등록")
-                    .font(.system(size: 17, weight: .bold))
+                    .font(.system(size: 17, weight: .bold, design: .rounded))
             }
             .frame(maxWidth: .infinity)
             .padding(.vertical, 16)
@@ -512,11 +510,11 @@ struct ContentView: View {
                 RoundedRectangle(cornerRadius: 16)
                     .fill(
                         viewModel.isFavorited
-                        ? LinearGradient(colors: [Color.pink.opacity(0.3), Color.pink.opacity(0.2)], startPoint: .leading, endPoint: .trailing)
-                        : LinearGradient(colors: [Color.pink, Color.red.opacity(0.8)], startPoint: .leading, endPoint: .trailing)
+                        ? LinearGradient(colors: [Color.pink.opacity(0.08), Color.pink.opacity(0.05)], startPoint: .leading, endPoint: .trailing)
+                        : LinearGradient(colors: [Color(red: 1.0, green: 0.45, blue: 0.55), Color(red: 0.95, green: 0.35, blue: 0.5)], startPoint: .leading, endPoint: .trailing)
                     )
             )
-            .foregroundColor(.white)
+            .foregroundColor(viewModel.isFavorited ? Color.pink : .white)
         }
         .disabled(viewModel.isFavorited)
         .animation(.easeInOut(duration: 0.3), value: viewModel.isFavorited)
@@ -524,12 +522,11 @@ struct ContentView: View {
 
     private var remainingSection: some View {
         VStack(spacing: 16) {
-            // Section header
             HStack(spacing: 8) {
                 Rectangle()
                     .fill(
                         LinearGradient(
-                            colors: [.clear, Color.white.opacity(0.1)],
+                            colors: [.clear, textTertiary.opacity(0.3)],
                             startPoint: .leading,
                             endPoint: .trailing
                         )
@@ -537,15 +534,15 @@ struct ContentView: View {
                     .frame(height: 1)
 
                 Text("나머지")
-                    .font(.system(size: 13, weight: .semibold))
-                    .foregroundColor(.white.opacity(0.4))
+                    .font(.system(size: 14, weight: .semibold, design: .rounded))
+                    .foregroundColor(textTertiary)
                     .tracking(1)
                     .fixedSize()
 
                 Rectangle()
                     .fill(
                         LinearGradient(
-                            colors: [Color.white.opacity(0.1), .clear],
+                            colors: [textTertiary.opacity(0.3), .clear],
                             startPoint: .leading,
                             endPoint: .trailing
                         )
@@ -572,37 +569,31 @@ struct ContentView: View {
                 .frame(height: 180)
                 .clipped()
 
-            // Gradient overlay
             LinearGradient(
-                colors: [.clear, .clear, Color.black.opacity(0.7)],
+                colors: [.clear, .clear, Color.black.opacity(0.5)],
                 startPoint: .top,
                 endPoint: .bottom
             )
 
-            // Score overlay
             if let scores = candidate.scores {
                 HStack(spacing: 4) {
                     Text("\(Int(scores.totalScore * 100))")
                         .font(.system(size: 20, weight: .bold, design: .rounded))
                         .foregroundColor(.white)
                     Text("점")
-                        .font(.system(size: 11, weight: .medium))
-                        .foregroundColor(.white.opacity(0.6))
+                        .font(.system(size: 11, weight: .medium, design: .rounded))
+                        .foregroundColor(.white.opacity(0.8))
                 }
                 .padding(.horizontal, 10)
                 .padding(.vertical, 6)
                 .background(
                     Capsule()
-                        .fill(.ultraThinMaterial)
-                        .environment(\.colorScheme, .dark)
+                        .fill(.regularMaterial)
                 )
                 .padding(10)
             }
         }
-        .clipShape(RoundedRectangle(cornerRadius: 14))
-        .overlay(
-            RoundedRectangle(cornerRadius: 14)
-                .stroke(Color.white.opacity(0.06), lineWidth: 1)
-        )
+        .clipShape(RoundedRectangle(cornerRadius: 16))
+        .shadow(color: Color.black.opacity(0.1), radius: 6, y: 3)
     }
 }

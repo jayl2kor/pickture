@@ -16,23 +16,33 @@ final class PhotoViewModel: ObservableObject {
     @Published var topN = 3
 
     private let analyzer = ImageAnalyzer()
+    private var analysisTask: Task<Void, Never>?
 
     func reset() {
+        cancelAnalysis()
         selectedItems = []
         candidates = []
         isFavorited = false
         topN = 3
     }
 
+    func cancelAnalysis() {
+        analysisTask?.cancel()
+        analysisTask = nil
+        isLoading = false
+        isAnalyzing = false
+    }
+
     func loadAndAnalyze() {
         guard selectedItems.count > topN else { return }
 
-        Task {
+        analysisTask = Task {
             isLoading = true
             candidates = []
 
             var images: [(UIImage, String?)] = []
             for item in selectedItems {
+                guard !Task.isCancelled else { return }
                 if let data = try? await item.loadTransferable(type: Data.self),
                    let image = UIImage(data: data) {
                     images.append((image, item.itemIdentifier))
@@ -40,7 +50,7 @@ final class PhotoViewModel: ObservableObject {
             }
 
             isLoading = false
-            guard !images.isEmpty else { return }
+            guard !Task.isCancelled, !images.isEmpty else { return }
 
             await runAnalysis(images: images)
         }
