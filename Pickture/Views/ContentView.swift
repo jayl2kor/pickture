@@ -506,30 +506,60 @@ struct ContentView: View {
     }
 
     private var favoriteButton: some View {
-        Button {
-            viewModel.favoriteTopN()
-        } label: {
-            HStack(spacing: 10) {
-                Image(systemName: viewModel.isFavorited ? "heart.fill" : "heart")
-                    .font(.system(size: 17, weight: .semibold))
-
-                Text(viewModel.isFavorited ? "즐겨찾기 등록 완료" : "TOP \(viewModel.topN) 즐겨찾기 등록")
-                    .font(.system(size: 17, weight: .bold, design: .rounded))
+        HStack(spacing: 12) {
+            Button {
+                viewModel.favoriteTopN()
+            } label: {
+                HStack(spacing: 10) {
+                    Image(systemName: viewModel.isFavorited ? "heart.fill" : "heart")
+                        .font(.system(size: 17, weight: .semibold))
+                    Text(viewModel.isFavorited ? "등록 완료" : "즐겨찾기")
+                        .font(.system(size: 15, weight: .bold, design: .rounded))
+                }
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 16)
+                .background(
+                    RoundedRectangle(cornerRadius: 16)
+                        .fill(
+                            viewModel.isFavorited
+                            ? LinearGradient(colors: [Color.pink.opacity(0.08), Color.pink.opacity(0.05)], startPoint: .leading, endPoint: .trailing)
+                            : LinearGradient(colors: [Color(red: 1.0, green: 0.45, blue: 0.55), Color(red: 0.95, green: 0.35, blue: 0.5)], startPoint: .leading, endPoint: .trailing)
+                        )
+                )
+                .foregroundColor(viewModel.isFavorited ? Color.pink : .white)
             }
-            .frame(maxWidth: .infinity)
-            .padding(.vertical, 16)
-            .background(
-                RoundedRectangle(cornerRadius: 16)
-                    .fill(
-                        viewModel.isFavorited
-                        ? LinearGradient(colors: [Color.pink.opacity(0.08), Color.pink.opacity(0.05)], startPoint: .leading, endPoint: .trailing)
-                        : LinearGradient(colors: [Color(red: 1.0, green: 0.45, blue: 0.55), Color(red: 0.95, green: 0.35, blue: 0.5)], startPoint: .leading, endPoint: .trailing)
-                    )
-            )
-            .foregroundColor(viewModel.isFavorited ? Color.pink : .white)
+            .disabled(viewModel.isFavorited)
+            .animation(.easeInOut(duration: 0.3), value: viewModel.isFavorited)
+
+            Button {
+                shareTopPhotos()
+            } label: {
+                HStack(spacing: 8) {
+                    Image(systemName: "square.and.arrow.up")
+                        .font(.system(size: 17, weight: .semibold))
+                    Text("공유")
+                        .font(.system(size: 15, weight: .bold, design: .rounded))
+                }
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 16)
+                .background(
+                    RoundedRectangle(cornerRadius: 16)
+                        .fill(cardFill)
+                )
+                .foregroundColor(textPrimary)
+                .shadow(color: Color.black.opacity(0.06), radius: 6, y: 2)
+            }
         }
-        .disabled(viewModel.isFavorited)
-        .animation(.easeInOut(duration: 0.3), value: viewModel.isFavorited)
+    }
+
+    private func shareTopPhotos() {
+        let images = viewModel.candidates.prefix(viewModel.topN).map(\.image)
+        guard !images.isEmpty else { return }
+
+        let activityVC = UIActivityViewController(activityItems: images, applicationActivities: nil)
+        guard let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
+              let rootVC = windowScene.windows.first?.rootViewController else { return }
+        rootVC.present(activityVC, animated: true)
     }
 
     private var remainingSection: some View {
