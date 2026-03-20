@@ -5,7 +5,13 @@ import Photos
 @MainActor
 final class PhotoViewModel: ObservableObject {
     @Published var selectedItems: [PhotosPickerItem] = [] {
-        didSet { candidates = [] }
+        didSet {
+            candidates = []
+            let maxAllowed = max(selectedItems.count - 1, 1)
+            if topN > maxAllowed {
+                topN = min(3, maxAllowed)
+            }
+        }
     }
     @Published var candidates: [PhotoCandidate] = []
     @Published var isLoading = false
