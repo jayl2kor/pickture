@@ -19,6 +19,7 @@ final class PhotoViewModel: ObservableObject {
     @Published var progressCurrent = 0
     @Published var progressTotal = 0
     @Published var isFavorited = false
+    @Published var loadFailCount = 0
     @Published var showFavoriteError = false
     @Published var topN = 3
     @Published var sortCriteria: SortCriteria = .totalScore
@@ -94,14 +95,18 @@ final class PhotoViewModel: ObservableObject {
             candidates = []
 
             var images: [(UIImage, String?)] = []
+            var failCount = 0
             for item in selectedItems {
                 guard !Task.isCancelled else { return }
                 if let data = try? await item.loadTransferable(type: Data.self),
                    let image = UIImage(data: data) {
                     images.append((image, item.itemIdentifier))
+                } else {
+                    failCount += 1
                 }
             }
 
+            loadFailCount = failCount
             isLoading = false
             guard !Task.isCancelled, !images.isEmpty else { return }
 

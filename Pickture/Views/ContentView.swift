@@ -98,6 +98,14 @@ struct ContentView: View {
         } message: {
             Text("즐겨찾기 등록을 위해 사진 라이브러리 쓰기 권한이 필요합니다. 설정에서 권한을 허용해주세요.")
         }
+        .alert("사진 로드 실패", isPresented: .init(
+            get: { viewModel.loadFailCount > 0 && !viewModel.candidates.isEmpty },
+            set: { if !$0 { viewModel.loadFailCount = 0 } }
+        )) {
+            Button("확인", role: .cancel) {}
+        } message: {
+            Text("\(viewModel.loadFailCount)장의 사진을 불러오지 못했습니다. 나머지 사진으로 분석이 완료되었습니다.")
+        }
         .onChange(of: viewModel.candidates.count) { newCount in
             if newCount == 0 { showResults = false }
         }
