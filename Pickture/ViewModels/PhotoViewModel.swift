@@ -16,6 +16,9 @@ final class PhotoViewModel: ObservableObject {
     @Published var showFavoriteError = false
     @Published var topN = 3
     @Published var sortCriteria: SortCriteria = .totalScore
+    @Published var isCompareMode = false
+    @Published var compareSelection: [PhotoCandidate] = []
+    @Published var showComparison = false
 
     var sortedCandidates: [PhotoCandidate] {
         candidates.sorted {
@@ -34,6 +37,40 @@ final class PhotoViewModel: ObservableObject {
         candidates = []
         isFavorited = false
         topN = 3
+        exitCompareMode()
+    }
+
+    func toggleCompareMode() {
+        isCompareMode.toggle()
+        if !isCompareMode {
+            compareSelection = []
+            showComparison = false
+        }
+    }
+
+    func exitCompareMode() {
+        isCompareMode = false
+        compareSelection = []
+        showComparison = false
+    }
+
+    func toggleCompareSelection(_ candidate: PhotoCandidate) {
+        if let idx = compareSelection.firstIndex(where: { $0.id == candidate.id }) {
+            compareSelection.remove(at: idx)
+        } else if compareSelection.count < 2 {
+            compareSelection.append(candidate)
+            if compareSelection.count == 2 {
+                showComparison = true
+            }
+        } else {
+            compareSelection[0] = compareSelection[1]
+            compareSelection[1] = candidate
+            showComparison = true
+        }
+    }
+
+    func isSelectedForCompare(_ candidate: PhotoCandidate) -> Bool {
+        compareSelection.contains(where: { $0.id == candidate.id })
     }
 
     func cancelAnalysis() {
