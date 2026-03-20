@@ -14,29 +14,29 @@ private struct ScoreBar: View {
         HStack(spacing: 8) {
             Image(systemName: icon)
                 .font(.system(size: 11, weight: .medium))
-                .foregroundColor(color.opacity(0.9))
+                .foregroundColor(color)
                 .frame(width: 16)
 
             Text(label)
-                .font(.system(size: 12, weight: .medium))
-                .foregroundColor(.white.opacity(0.7))
-                .frame(width: 56, alignment: .leading)
+                .font(.system(size: 13, weight: .medium, design: .rounded))
+                .foregroundColor(Color(red: 0.4, green: 0.35, blue: 0.45))
+                .frame(width: 60, alignment: .leading)
 
             GeometryReader { geo in
                 ZStack(alignment: .leading) {
                     Capsule()
-                        .fill(Color.white.opacity(0.08))
-                        .frame(height: 6)
+                        .fill(Color(red: 0.94, green: 0.92, blue: 0.96))
+                        .frame(height: 8)
 
                     Capsule()
                         .fill(
                             LinearGradient(
-                                colors: [color.opacity(0.7), color],
+                                colors: [color.opacity(0.6), color],
                                 startPoint: .leading,
                                 endPoint: .trailing
                             )
                         )
-                        .frame(width: geo.size.width * animatedScore, height: 6)
+                        .frame(width: geo.size.width * animatedScore, height: 8)
                 }
                 .frame(maxHeight: .infinity, alignment: .center)
             }
@@ -61,24 +61,19 @@ private struct RankBadge: View {
     let rank: Int
 
     private var badgeSize: CGFloat {
-        rank == 1 ? 44 : 38
-    }
-
-    private var iconName: String {
         switch rank {
-        case 1: return "crown.fill"
-        case 2: return "star.fill"
-        case 3: return "star.fill"
-        default: return "circle.fill"
+        case 1: return 48
+        case 2: return 40
+        default: return 36
         }
     }
 
     private var gradientColors: [Color] {
         switch rank {
-        case 1: return [Color(red: 1.0, green: 0.84, blue: 0.3), Color(red: 0.95, green: 0.7, blue: 0.1)]
-        case 2: return [Color(red: 0.82, green: 0.84, blue: 0.88), Color(red: 0.65, green: 0.67, blue: 0.72)]
-        case 3: return [Color(red: 0.85, green: 0.6, blue: 0.35), Color(red: 0.72, green: 0.45, blue: 0.2)]
-        default: return [.blue, .blue]
+        case 1: return [Color(red: 1.0, green: 0.75, blue: 0.3), Color(red: 1.0, green: 0.55, blue: 0.25)]
+        case 2: return [Color(red: 0.88, green: 0.72, blue: 0.82), Color(red: 0.75, green: 0.55, blue: 0.7)]
+        case 3: return [Color(red: 0.7, green: 0.78, blue: 0.9), Color(red: 0.5, green: 0.6, blue: 0.78)]
+        default: return [Color.pink.opacity(0.6), Color.pink.opacity(0.4)]
         }
     }
 
@@ -95,9 +90,9 @@ private struct RankBadge: View {
                 .frame(width: badgeSize, height: badgeSize)
                 .shadow(color: gradientColors[0].opacity(0.5), radius: 6, y: 2)
 
-            VStack(spacing: -2) {
+            VStack(spacing: 0) {
                 if rank == 1 {
-                    Image(systemName: iconName)
+                    Image(systemName: "crown.fill")
                         .font(.system(size: 12, weight: .bold))
                         .foregroundColor(.white)
                         .offset(y: 1)
@@ -120,17 +115,17 @@ private struct ScoreRing: View {
 
     private var ringColor: Color {
         switch rank {
-        case 1: return Color(red: 1.0, green: 0.84, blue: 0.3)
-        case 2: return Color(red: 0.82, green: 0.84, blue: 0.88)
-        case 3: return Color(red: 0.85, green: 0.6, blue: 0.35)
-        default: return .blue
+        case 1: return Color(red: 1.0, green: 0.6, blue: 0.3)
+        case 2: return Color(red: 0.82, green: 0.6, blue: 0.75)
+        case 3: return Color(red: 0.55, green: 0.65, blue: 0.82)
+        default: return Color.pink
         }
     }
 
     var body: some View {
         ZStack {
             Circle()
-                .stroke(Color.white.opacity(0.08), lineWidth: 4)
+                .stroke(Color.white.opacity(0.5), lineWidth: 5)
                 .frame(width: 60, height: 60)
 
             Circle()
@@ -141,7 +136,7 @@ private struct ScoreRing: View {
                         startPoint: .topLeading,
                         endPoint: .bottomTrailing
                     ),
-                    style: StrokeStyle(lineWidth: 4, lineCap: .round)
+                    style: StrokeStyle(lineWidth: 5, lineCap: .round)
                 )
                 .frame(width: 60, height: 60)
                 .rotationEffect(.degrees(-90))
@@ -151,8 +146,8 @@ private struct ScoreRing: View {
                     .font(.system(size: 20, weight: .bold, design: .rounded))
                     .foregroundColor(.white)
                 Text("점")
-                    .font(.system(size: 10, weight: .medium))
-                    .foregroundColor(.white.opacity(0.5))
+                    .font(.system(size: 10, weight: .medium, design: .rounded))
+                    .foregroundColor(.white.opacity(0.8))
             }
         }
         .onAppear {
@@ -185,7 +180,6 @@ struct ResultCardView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            // Photo with overlays
             ZStack(alignment: .topLeading) {
                 Image(uiImage: candidate.image)
                     .resizable()
@@ -194,22 +188,19 @@ struct ResultCardView: View {
                     .frame(height: imageHeight)
                     .clipped()
 
-                // Bottom gradient overlay for readability
                 VStack {
                     Spacer()
                     LinearGradient(
-                        colors: [.clear, Color.black.opacity(0.6)],
+                        colors: [.clear, Color.black.opacity(0.4)],
                         startPoint: .top,
                         endPoint: .bottom
                     )
                     .frame(height: 100)
                 }
 
-                // Rank badge
                 RankBadge(rank: rank)
                     .padding(12)
 
-                // Score ring in bottom-right
                 if let scores = candidate.scores {
                     VStack {
                         Spacer()
@@ -224,9 +215,26 @@ struct ResultCardView: View {
             .frame(height: imageHeight)
             .clipped()
 
-            // Score details
             if let scores = candidate.scores {
                 VStack(spacing: 8) {
+                    if !scores.faceDetected {
+                        HStack(spacing: 6) {
+                            Image(systemName: "exclamationmark.triangle.fill")
+                                .font(.system(size: 12))
+                                .foregroundColor(Color.orange)
+                            Text("얼굴이 감지되지 않아 일부 항목이 0점입니다")
+                                .font(.system(size: 12, design: .rounded))
+                                .foregroundColor(Color(red: 0.6, green: 0.5, blue: 0.4))
+                        }
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 8)
+                        .frame(maxWidth: .infinity)
+                        .background(
+                            RoundedRectangle(cornerRadius: 10)
+                                .fill(Color.orange.opacity(0.08))
+                        )
+                    }
+
                     ForEach(scores.details, id: \.0) { name, score in
                         ScoreBar(
                             label: name,
@@ -242,26 +250,15 @@ struct ResultCardView: View {
         }
         .background(
             RoundedRectangle(cornerRadius: 20)
-                .fill(Color.white.opacity(0.06))
-        )
-        .overlay(
-            RoundedRectangle(cornerRadius: 20)
-                .stroke(
-                    LinearGradient(
-                        colors: [Color.white.opacity(0.12), Color.white.opacity(0.04)],
-                        startPoint: .topLeading,
-                        endPoint: .bottomTrailing
-                    ),
-                    lineWidth: 1
-                )
+                .fill(Color.white)
         )
         .clipShape(RoundedRectangle(cornerRadius: 20))
-        .shadow(color: .black.opacity(0.3), radius: 12, y: 6)
+        .shadow(color: Color(red: 0.6, green: 0.4, blue: 0.7).opacity(0.15), radius: 12, y: 6)
     }
 
     private func scoreColor(_ score: Double) -> Color {
-        if score >= 0.7 { return Color(red: 0.3, green: 0.85, blue: 0.6) }
-        if score >= 0.4 { return Color(red: 1.0, green: 0.75, blue: 0.3) }
-        return Color(red: 1.0, green: 0.4, blue: 0.4)
+        if score >= 0.7 { return Color(red: 0.35, green: 0.78, blue: 0.65) }
+        if score >= 0.4 { return Color(red: 1.0, green: 0.65, blue: 0.35) }
+        return Color(red: 0.9, green: 0.4, blue: 0.45)
     }
 }

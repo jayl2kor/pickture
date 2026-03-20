@@ -15,6 +15,10 @@ struct AnalysisScores {
         + composition * 0.10
     }
 
+    var faceDetected: Bool {
+        faceQuality > 0 || eyesOpen > 0
+    }
+
     var details: [(String, Double)] {
         [
             ("선명도", sharpness),
