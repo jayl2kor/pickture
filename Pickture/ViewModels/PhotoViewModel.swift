@@ -155,8 +155,15 @@ final class PhotoViewModel: ObservableObject {
                 return
             }
 
+            // PHPickerResult의 assetIdentifier는 PHAsset.localIdentifier와 동일
             let assets = PHAsset.fetchAssets(withLocalIdentifiers: identifiers, options: nil)
-            guard assets.count > 0 else { return }
+            guard assets.count > 0 else {
+                isFavoriting = false
+                #if DEBUG
+                print("No PHAssets found for identifiers: \(identifiers)")
+                #endif
+                return
+            }
 
             do {
                 try await PHPhotoLibrary.shared().performChanges {
@@ -167,8 +174,10 @@ final class PhotoViewModel: ObservableObject {
                 }
                 isFavoriting = false
                 isFavorited = true
+                UINotificationFeedbackGenerator().notificationOccurred(.success)
             } catch {
                 isFavoriting = false
+                showFavoriteError = true
                 #if DEBUG
                 print("Failed to favorite: \(error)")
                 #endif
