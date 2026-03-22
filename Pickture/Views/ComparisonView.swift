@@ -29,8 +29,10 @@ struct ComparisonView: View {
 
                     // Side-by-side photos
                     HStack(spacing: 8) {
-                        photoCard(candidate: left)
-                        photoCard(candidate: right)
+                        let leftTotal = left.scores?.totalScore ?? 0
+                        let rightTotal = right.scores?.totalScore ?? 0
+                        photoCard(candidate: left, isWinner: leftTotal > rightTotal + 0.001)
+                        photoCard(candidate: right, isWinner: rightTotal > leftTotal + 0.001)
                     }
                     .padding(.horizontal, 16)
 
@@ -73,7 +75,7 @@ struct ComparisonView: View {
         }
     }
 
-    private func photoCard(candidate: PhotoCandidate) -> some View {
+    private func photoCard(candidate: PhotoCandidate, isWinner: Bool) -> some View {
         VStack(spacing: 8) {
             Image(uiImage: candidate.image)
                 .resizable()
@@ -81,11 +83,31 @@ struct ComparisonView: View {
                 .frame(height: 220)
                 .clipped()
                 .clipShape(RoundedRectangle(cornerRadius: 16))
+                .overlay(
+                    isWinner
+                    ? RoundedRectangle(cornerRadius: 16)
+                        .stroke(
+                            LinearGradient(
+                                colors: [Color(red: 1.0, green: 0.8, blue: 0.4), Color(red: 1.0, green: 0.5, blue: 0.35)],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            ),
+                            lineWidth: 2.5
+                        )
+                    : nil
+                )
 
             if let scores = candidate.scores {
-                Text("\(Int(scores.totalScore * 100))점")
-                    .font(.system(size: 20, weight: .bold, design: .rounded))
-                    .foregroundColor(textPrimary)
+                HStack(spacing: 4) {
+                    if isWinner {
+                        Image(systemName: "crown.fill")
+                            .font(.system(size: 12))
+                            .foregroundColor(Color(red: 1.0, green: 0.65, blue: 0.3))
+                    }
+                    Text("\(Int(scores.totalScore * 100))점")
+                        .font(.system(size: 20, weight: .bold, design: .rounded))
+                        .foregroundColor(textPrimary)
+                }
             }
         }
     }
@@ -93,40 +115,40 @@ struct ComparisonView: View {
     private func compareRow(label: String, leftScore: Double, rightScore: Double, bold: Bool = false) -> some View {
         let leftWins = leftScore > rightScore + 0.001
         let rightWins = rightScore > leftScore + 0.001
+        let winColor = Color(red: 1.0, green: 0.45, blue: 0.55)
 
         return HStack(spacing: 0) {
-            Text("\(Int(leftScore * 100))")
-                .font(.system(size: bold ? 18 : 15, weight: leftWins ? .bold : .regular, design: .rounded))
-                .foregroundColor(leftWins ? Color.pink : textSecondary)
-                .frame(width: 44, alignment: .trailing)
+            HStack(spacing: 4) {
+                Text("\(Int(leftScore * 100))")
+                    .font(.system(size: bold ? 18 : 15, weight: leftWins ? .bold : .regular, design: .rounded))
+                    .foregroundColor(leftWins ? winColor : textSecondary)
 
-            if leftWins {
-                Image(systemName: "chevron.left")
-                    .font(.system(size: 10, weight: .bold))
-                    .foregroundColor(Color.pink)
-                    .frame(width: 20)
-            } else {
-                Spacer().frame(width: 20)
+                if leftWins {
+                    Image(systemName: "chevron.left")
+                        .font(.system(size: 9, weight: .bold))
+                        .foregroundColor(winColor)
+                }
             }
+            .frame(width: 56, alignment: .trailing)
 
             Text(label)
                 .font(.system(size: bold ? 14 : 13, weight: bold ? .bold : .medium, design: .rounded))
                 .foregroundColor(textPrimary)
                 .frame(maxWidth: .infinity)
 
-            if rightWins {
-                Image(systemName: "chevron.right")
-                    .font(.system(size: 10, weight: .bold))
-                    .foregroundColor(Color.pink)
-                    .frame(width: 20)
-            } else {
-                Spacer().frame(width: 20)
-            }
+            HStack(spacing: 4) {
+                if rightWins {
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 9, weight: .bold))
+                        .foregroundColor(winColor)
+                }
 
-            Text("\(Int(rightScore * 100))")
-                .font(.system(size: bold ? 18 : 15, weight: rightWins ? .bold : .regular, design: .rounded))
-                .foregroundColor(rightWins ? Color.pink : textSecondary)
-                .frame(width: 44, alignment: .leading)
+                Text("\(Int(rightScore * 100))")
+                    .font(.system(size: bold ? 18 : 15, weight: rightWins ? .bold : .regular, design: .rounded))
+                    .foregroundColor(rightWins ? winColor : textSecondary)
+            }
+            .frame(width: 56, alignment: .leading)
         }
+        .padding(.vertical, 2)
     }
 }

@@ -1,5 +1,6 @@
 import SwiftUI
 import PhotosUI
+import Photos
 
 private extension View {
     @ViewBuilder
@@ -12,9 +13,51 @@ private extension View {
     }
 }
 
+/// Press scale feedback for buttons (scale 0.97 on press, spring release)
+private struct ScaleButtonStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .scaleEffect(configuration.isPressed ? 0.97 : 1.0)
+            .opacity(configuration.isPressed ? 0.92 : 1.0)
+            .animation(.spring(response: 0.25, dampingFraction: 0.7), value: configuration.isPressed)
+    }
+}
+
+/// Shimmer effect for skeleton loading states
+private struct ShimmerModifier: ViewModifier {
+    @State private var phase: CGFloat = -1
+
+    func body(content: Content) -> some View {
+        content
+            .overlay(
+                LinearGradient(
+                    colors: [
+                        .clear,
+                        Color.white.opacity(0.4),
+                        .clear
+                    ],
+                    startPoint: .leading,
+                    endPoint: .trailing
+                )
+                .offset(x: phase * 300)
+                .mask(content)
+            )
+            .onAppear {
+                withAnimation(.linear(duration: 1.5).repeatForever(autoreverses: false)) {
+                    phase = 1
+                }
+            }
+    }
+}
+
+private extension View {
+    func shimmer() -> some View {
+        modifier(ShimmerModifier())
+    }
+}
+
 struct ContentView: View {
     @StateObject private var viewModel = PhotoViewModel()
-    @State private var pulseAnalyze = false
     @State private var showResults = false
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
@@ -67,6 +110,9 @@ struct ContentView: View {
                 .padding(.horizontal, 20)
                 .padding(.bottom, 40)
             }
+        }
+        .task {
+            await PHPhotoLibrary.requestAuthorization(for: .readWrite)
         }
         #if DEBUG
         .onAppear {
@@ -155,11 +201,11 @@ struct ContentView: View {
 
             if viewModel.selectedItems.isEmpty {
                 HStack(spacing: 16) {
-                    stepBubble(number: "1", text: "사진 선택")
+                    stepBubble(number: "1", text: "사진 선택", color: Color(red: 1.0, green: 0.5, blue: 0.6))
                     stepArrow
-                    stepBubble(number: "2", text: "AI 분석")
+                    stepBubble(number: "2", text: "AI 분석", color: Color(red: 0.55, green: 0.65, blue: 1.0))
                     stepArrow
-                    stepBubble(number: "3", text: "베스트 확인")
+                    stepBubble(number: "3", text: "베스트 확인", color: Color(red: 0.5, green: 0.82, blue: 0.55))
                 }
                 .padding(.top, 12)
             }
@@ -167,13 +213,13 @@ struct ContentView: View {
         .padding(.bottom, 8)
     }
 
-    private func stepBubble(number: String, text: String) -> some View {
+    private func stepBubble(number: String, text: String, color: Color) -> some View {
         VStack(spacing: 4) {
             Text(number)
                 .font(.system(size: 12, weight: .bold, design: .rounded))
                 .foregroundColor(.white)
                 .frame(width: 24, height: 24)
-                .background(Circle().fill(accentGradient))
+                .background(Circle().fill(color))
             Text(text)
                 .font(.system(size: 11, weight: .medium, design: .rounded))
                 .foregroundColor(textSecondary)
@@ -183,7 +229,7 @@ struct ContentView: View {
     private var stepArrow: some View {
         Image(systemName: "chevron.right")
             .font(.system(size: 10, weight: .bold))
-            .foregroundColor(textTertiary)
+            .foregroundStyle(accentGradient)
     }
 
     // MARK: - Photo Selection
@@ -201,7 +247,7 @@ struct ContentView: View {
                             Circle()
                                 .fill(
                                     LinearGradient(
-                                        colors: [Color.pink.opacity(0.12), Color.orange.opacity(0.08)],
+                                        colors: [Color(red: 1.0, green: 0.5, blue: 0.6).opacity(0.15), Color(red: 0.7, green: 0.5, blue: 0.9).opacity(0.12)],
                                         startPoint: .topLeading,
                                         endPoint: .bottomTrailing
                                     )
@@ -210,7 +256,13 @@ struct ContentView: View {
 
                             Image(systemName: "photo.on.rectangle.angled")
                                 .font(.system(size: 28, weight: .medium))
-                                .foregroundStyle(accentGradient)
+                                .foregroundStyle(
+                                    LinearGradient(
+                                        colors: [Color(red: 1.0, green: 0.45, blue: 0.55), Color(red: 0.7, green: 0.5, blue: 0.9)],
+                                        startPoint: .topLeading,
+                                        endPoint: .bottomTrailing
+                                    )
+                                )
                         }
 
                         Text("사진 선택하기")
@@ -245,12 +297,24 @@ struct ContentView: View {
                     HStack(spacing: 12) {
                         ZStack {
                             Circle()
-                                .fill(Color.pink.opacity(0.1))
+                                .fill(
+                                    LinearGradient(
+                                        colors: [Color(red: 1.0, green: 0.5, blue: 0.6).opacity(0.12), Color(red: 0.7, green: 0.5, blue: 0.9).opacity(0.1)],
+                                        startPoint: .topLeading,
+                                        endPoint: .bottomTrailing
+                                    )
+                                )
                                 .frame(width: 44, height: 44)
 
                             Image(systemName: "photo.on.rectangle.angled")
                                 .font(.system(size: 18, weight: .medium))
-                                .foregroundStyle(accentGradient)
+                                .foregroundStyle(
+                                    LinearGradient(
+                                        colors: [Color(red: 1.0, green: 0.45, blue: 0.55), Color(red: 0.7, green: 0.5, blue: 0.9)],
+                                        startPoint: .topLeading,
+                                        endPoint: .bottomTrailing
+                                    )
+                                )
                         }
 
                         VStack(alignment: .leading, spacing: 2) {
@@ -313,17 +377,43 @@ struct ContentView: View {
     }
 
     private var loadingView: some View {
-        VStack(spacing: 16) {
-            ProgressView()
-                .progressViewStyle(CircularProgressViewStyle(tint: Color.pink))
-                .scaleEffect(1.2)
+        VStack(spacing: 20) {
+            // Skeleton card placeholders
+            ForEach(0..<2, id: \.self) { _ in
+                VStack(alignment: .leading, spacing: 12) {
+                    // Image placeholder
+                    RoundedRectangle(cornerRadius: 12)
+                        .fill(Color.pink.opacity(0.08))
+                        .frame(height: 160)
+                        .shimmer()
+
+                    // Score bar placeholders
+                    ForEach(0..<3, id: \.self) { _ in
+                        HStack(spacing: 8) {
+                            RoundedRectangle(cornerRadius: 4)
+                                .fill(Color.pink.opacity(0.06))
+                                .frame(width: 60, height: 12)
+                            RoundedRectangle(cornerRadius: 4)
+                                .fill(Color.pink.opacity(0.06))
+                                .frame(height: 8)
+                        }
+                        .shimmer()
+                    }
+                }
+                .padding(16)
+                .background(
+                    RoundedRectangle(cornerRadius: 20)
+                        .fill(cardFill)
+                )
+                .shadow(color: Color.pink.opacity(0.06), radius: 8, y: 3)
+            }
 
             Text("사진 불러오는 중...")
                 .font(.system(size: 14, weight: .medium, design: .rounded))
                 .foregroundColor(textSecondary)
         }
         .frame(maxWidth: .infinity)
-        .padding(.vertical, 32)
+        .padding(.vertical, 16)
     }
 
     private var analyzingView: some View {
@@ -333,10 +423,12 @@ struct ContentView: View {
 
         return VStack(spacing: 20) {
             ZStack {
+                // Background track
                 Circle()
-                    .stroke(Color.pink.opacity(0.12), lineWidth: 6)
+                    .stroke(Color.pink.opacity(0.1), lineWidth: 6)
                     .frame(width: 80, height: 80)
 
+                // Progress arc
                 Circle()
                     .trim(from: 0, to: progress)
                     .stroke(
@@ -345,15 +437,21 @@ struct ContentView: View {
                     )
                     .frame(width: 80, height: 80)
                     .rotationEffect(.degrees(-90))
-                    .animation(.easeInOut(duration: 0.3), value: progress)
+                    .animation(.spring(response: 0.4, dampingFraction: 0.8), value: progress)
 
-                Text("\(percentage)%")
-                    .font(.system(size: 18, weight: .bold, design: .rounded))
-                    .foregroundColor(textPrimary)
+                VStack(spacing: -2) {
+                    Text("\(percentage)")
+                        .font(.system(size: 22, weight: .bold, design: .rounded))
+                        .foregroundColor(textPrimary)
+                        .contentTransition(.numericText())
+                    Text("%")
+                        .font(.system(size: 11, weight: .medium, design: .rounded))
+                        .foregroundColor(textTertiary)
+                }
             }
 
             VStack(spacing: 4) {
-                Text("분석 중")
+                Text("AI 분석 중")
                     .font(.system(size: 16, weight: .semibold, design: .rounded))
                     .foregroundColor(textPrimary)
 
@@ -374,6 +472,7 @@ struct ContentView: View {
                         Capsule().fill(Color.gray.opacity(0.12))
                     )
             }
+            .buttonStyle(ScaleButtonStyle())
         }
         .frame(maxWidth: .infinity)
         .padding(.vertical, 28)
@@ -401,9 +500,9 @@ struct ContentView: View {
                 Button {
                     if viewModel.topN > 1 { viewModel.topN -= 1 }
                 } label: {
-                    Image(systemName: "minus")
-                        .font(.system(size: 14, weight: .bold))
-                        .foregroundColor(viewModel.topN > 1 ? Color.pink : textTertiary.opacity(0.4))
+                    Image(systemName: "minus.circle.fill")
+                        .font(.system(size: 22))
+                        .foregroundStyle(viewModel.topN > 1 ? accentGradient : LinearGradient(colors: [textTertiary.opacity(0.3), textTertiary.opacity(0.3)], startPoint: .leading, endPoint: .trailing))
                         .frame(width: 44, height: 44)
                 }
                 .disabled(viewModel.topN <= 1)
@@ -417,9 +516,9 @@ struct ContentView: View {
                     let maxN = max(viewModel.selectedItems.count - 1, 1)
                     if viewModel.topN < maxN { viewModel.topN += 1 }
                 } label: {
-                    Image(systemName: "plus")
-                        .font(.system(size: 14, weight: .bold))
-                        .foregroundColor(viewModel.topN < viewModel.selectedItems.count - 1 ? Color.pink : textTertiary.opacity(0.4))
+                    Image(systemName: "plus.circle.fill")
+                        .font(.system(size: 22))
+                        .foregroundStyle(viewModel.topN < viewModel.selectedItems.count - 1 ? accentGradient : LinearGradient(colors: [textTertiary.opacity(0.3), textTertiary.opacity(0.3)], startPoint: .leading, endPoint: .trailing))
                         .frame(width: 44, height: 44)
                 }
                 .disabled(viewModel.topN >= viewModel.selectedItems.count - 1)
@@ -448,7 +547,8 @@ struct ContentView: View {
             } label: {
                 HStack(spacing: 10) {
                     Image(systemName: "wand.and.stars")
-                        .font(.system(size: 17, weight: .semibold))
+                        .font(.system(size: 18, weight: .semibold))
+                        .symbolRenderingMode(.hierarchical)
 
                     Text("분석 시작")
                         .font(.system(size: 17, weight: .bold, design: .rounded))
@@ -460,8 +560,7 @@ struct ContentView: View {
                         if isEnabled {
                             RoundedRectangle(cornerRadius: 16)
                                 .fill(accentGradient)
-                                .shadow(color: Color.pink.opacity(0.35), radius: 16, y: 4)
-                                .scaleEffect(pulseAnalyze ? 1.02 : 1.0)
+                                .shadow(color: Color.pink.opacity(0.3), radius: 12, y: 4)
                         } else {
                             RoundedRectangle(cornerRadius: 16)
                                 .fill(Color.gray.opacity(0.22))
@@ -470,17 +569,9 @@ struct ContentView: View {
                 )
                 .foregroundColor(isEnabled ? .white : textTertiary)
             }
+            .buttonStyle(ScaleButtonStyle())
             .accessibilityLabel(isEnabled ? "분석 시작" : "분석 시작 불가, 사진을 더 선택해주세요")
             .disabled(!isEnabled)
-            .onAppear {
-                guard !reduceMotion else { return }
-                withAnimation(.easeInOut(duration: 1.5).repeatForever(autoreverses: true)) {
-                    pulseAnalyze = true
-                }
-            }
-            .onDisappear {
-                pulseAnalyze = false
-            }
 
             if !isEnabled && !viewModel.selectedItems.isEmpty {
                 Text("최소 \(needed)장 이상 선택해주세요 (현재 \(viewModel.selectedItems.count)장)")
@@ -501,11 +592,12 @@ struct ContentView: View {
                         HStack(spacing: 4) {
                             Image(systemName: "sparkles")
                                 .font(.system(size: 12))
+                                .foregroundStyle(accentGradient)
                             Text("Pickture")
                                 .font(.system(size: 13, weight: .semibold, design: .rounded))
                                 .tracking(1)
+                                .foregroundColor(textTertiary)
                         }
-                        .foregroundColor(textTertiary)
 
                         Spacer()
 
@@ -516,7 +608,7 @@ struct ContentView: View {
                         } label: {
                             Text("다시 선택")
                                 .font(.system(size: 14, weight: .semibold, design: .rounded))
-                                .foregroundColor(Color.pink)
+                                .foregroundStyle(accentGradient)
                         }
                     }
 
@@ -537,10 +629,10 @@ struct ContentView: View {
                     ForEach(Array(viewModel.sortedCandidates.prefix(viewModel.topN).enumerated()), id: \.element.id) { index, candidate in
                         candidateCard(candidate: candidate, rank: index + 1)
                             .opacity(showResults ? 1 : 0)
-                            .offset(y: showResults ? 0 : 40)
+                            .offset(y: showResults ? 0 : 30)
                             .animation(
-                                .spring(response: 0.6, dampingFraction: 0.8)
-                                .delay(Double(index) * 0.15),
+                                .spring(response: 0.5, dampingFraction: 0.82)
+                                .delay(Double(index) * 0.1),
                                 value: showResults
                             )
                     }
@@ -562,10 +654,11 @@ struct ContentView: View {
                         HStack(spacing: 8) {
                             Image(systemName: "arrow.counterclockwise")
                                 .font(.system(size: 15, weight: .semibold))
+                                .foregroundStyle(accentGradient)
                             Text("처음부터 다시 하기")
                                 .font(.system(size: 15, weight: .semibold, design: .rounded))
+                                .foregroundColor(textSecondary)
                         }
-                        .foregroundColor(textSecondary)
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 14)
                         .background(
@@ -574,6 +667,7 @@ struct ContentView: View {
                         )
                         .shadow(color: Color.black.opacity(0.06), radius: 6, y: 2)
                     }
+                    .buttonStyle(ScaleButtonStyle())
                 }
             }
         }
@@ -591,17 +685,18 @@ struct ContentView: View {
                 Text(viewModel.isCompareMode ? "비교 모드 해제" : "사진 비교하기")
                     .font(.system(size: 14, weight: .semibold, design: .rounded))
             }
-            .foregroundColor(viewModel.isCompareMode ? .white : Color.pink)
+            .foregroundColor(viewModel.isCompareMode ? .white : Color(red: 0.4, green: 0.55, blue: 1.0))
             .padding(.horizontal, 16)
             .padding(.vertical, 10)
             .background(
                 Capsule().fill(
                     viewModel.isCompareMode
-                    ? AnyShapeStyle(LinearGradient(colors: [Color.pink, Color.pink.opacity(0.8)], startPoint: .leading, endPoint: .trailing))
-                    : AnyShapeStyle(Color.pink.opacity(0.1))
+                    ? AnyShapeStyle(LinearGradient(colors: [Color(red: 0.4, green: 0.55, blue: 1.0), Color(red: 0.55, green: 0.65, blue: 1.0)], startPoint: .leading, endPoint: .trailing))
+                    : AnyShapeStyle(Color(red: 0.4, green: 0.55, blue: 1.0).opacity(0.1))
                 )
             )
         }
+        .buttonStyle(ScaleButtonStyle())
     }
 
     private func candidateCard(candidate: PhotoCandidate, rank: Int) -> some View {
@@ -709,14 +804,21 @@ struct ContentView: View {
                 HStack(spacing: 6) {
                     Image(systemName: "arrow.up.arrow.down")
                         .font(.system(size: 12, weight: .semibold))
+                        .foregroundStyle(
+                            LinearGradient(
+                                colors: [Color(red: 0.7, green: 0.5, blue: 0.9), Color(red: 1.0, green: 0.5, blue: 0.6)],
+                                startPoint: .leading,
+                                endPoint: .trailing
+                            )
+                        )
                     Text(viewModel.sortCriteria.rawValue)
                         .font(.system(size: 13, weight: .semibold, design: .rounded))
+                        .foregroundColor(Color(red: 0.7, green: 0.5, blue: 0.9))
                 }
-                .foregroundColor(Color.pink)
                 .padding(.horizontal, 16)
                 .padding(.vertical, 12)
                 .background(
-                    Capsule().fill(Color.pink.opacity(0.1))
+                    Capsule().fill(Color(red: 0.7, green: 0.5, blue: 0.9).opacity(0.1))
                 )
             }
         }
@@ -736,6 +838,7 @@ struct ContentView: View {
                     } else {
                         Image(systemName: viewModel.isFavorited ? "heart.fill" : "heart")
                             .font(.system(size: 17, weight: .semibold))
+                            .foregroundColor(viewModel.isFavorited ? Color(red: 1.0, green: 0.35, blue: 0.45) : .white)
                     }
                     Text(viewModel.isFavoriting ? "등록 중..." : viewModel.isFavorited ? "등록 완료" : "즐겨찾기")
                         .font(.system(size: 15, weight: .bold, design: .rounded))
@@ -746,12 +849,13 @@ struct ContentView: View {
                     RoundedRectangle(cornerRadius: 16)
                         .fill(
                             viewModel.isFavorited
-                            ? LinearGradient(colors: [Color.pink.opacity(0.08), Color.pink.opacity(0.05)], startPoint: .leading, endPoint: .trailing)
-                            : LinearGradient(colors: [Color(red: 1.0, green: 0.45, blue: 0.55), Color(red: 0.95, green: 0.35, blue: 0.5)], startPoint: .leading, endPoint: .trailing)
+                            ? LinearGradient(colors: [Color(red: 1.0, green: 0.35, blue: 0.45).opacity(0.1), Color(red: 1.0, green: 0.35, blue: 0.45).opacity(0.06)], startPoint: .leading, endPoint: .trailing)
+                            : LinearGradient(colors: [Color(red: 1.0, green: 0.4, blue: 0.5), Color(red: 0.95, green: 0.3, blue: 0.5)], startPoint: .leading, endPoint: .trailing)
                         )
                 )
-                .foregroundColor(viewModel.isFavorited ? Color.pink : .white)
+                .foregroundColor(viewModel.isFavorited ? Color(red: 1.0, green: 0.35, blue: 0.45) : .white)
             }
+            .buttonStyle(ScaleButtonStyle())
             .disabled(viewModel.isFavorited || viewModel.isFavoriting)
             .animation(.easeInOut(duration: 0.3), value: viewModel.isFavorited)
 
@@ -761,8 +865,10 @@ struct ContentView: View {
                 HStack(spacing: 8) {
                     Image(systemName: "square.and.arrow.up")
                         .font(.system(size: 17, weight: .semibold))
+                        .foregroundColor(Color(red: 0.4, green: 0.65, blue: 1.0))
                     Text("공유")
                         .font(.system(size: 15, weight: .bold, design: .rounded))
+                        .foregroundColor(textPrimary)
                 }
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 16)
@@ -770,9 +876,9 @@ struct ContentView: View {
                     RoundedRectangle(cornerRadius: 16)
                         .fill(cardFill)
                 )
-                .foregroundColor(textPrimary)
                 .shadow(color: Color.black.opacity(0.06), radius: 6, y: 2)
             }
+            .buttonStyle(ScaleButtonStyle())
         }
     }
 

@@ -7,6 +7,7 @@ private struct ScoreBar: View {
     let icon: String
     let score: Double
     let color: Color
+    var staggerIndex: Int = 0
 
     @State private var animatedScore: Double = 0
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -54,7 +55,8 @@ private struct ScoreBar: View {
             if reduceMotion {
                 animatedScore = score
             } else {
-                withAnimation(.easeOut(duration: 0.8).delay(0.1)) {
+                // Staggered reveal: 40ms between each bar, faster animation
+                withAnimation(.easeOut(duration: 0.4).delay(0.08 + Double(staggerIndex) * 0.04)) {
                     animatedScore = score
                 }
             }
@@ -162,7 +164,7 @@ private struct ScoreRing: View {
             if reduceMotion {
                 animatedScore = score
             } else {
-                withAnimation(.easeOut(duration: 1.0).delay(0.2)) {
+                withAnimation(.easeOut(duration: 0.5).delay(0.1)) {
                     animatedScore = score
                 }
             }
@@ -185,8 +187,17 @@ struct ResultCardView: View {
         "선명도": "camera.aperture",
         "얼굴 품질": "face.smiling",
         "눈 뜨임": "eye",
-        "노출": "sun.max",
+        "노출": "sun.max.fill",
         "구도": "squareshape.split.3x3"
+    ]
+
+    /// Each score category gets its own vivid color
+    private static let scoreColorMap: [String: Color] = [
+        "선명도": Color(red: 0.4, green: 0.7, blue: 1.0),       // bright sky blue
+        "얼굴 품질": Color(red: 1.0, green: 0.5, blue: 0.6),    // coral pink
+        "눈 뜨임": Color(red: 0.55, green: 0.8, blue: 0.45),    // fresh green
+        "노출": Color(red: 1.0, green: 0.75, blue: 0.3),        // warm amber
+        "구도": Color(red: 0.7, green: 0.5, blue: 0.9)          // soft violet
     ]
 
     var body: some View {
@@ -245,12 +256,13 @@ struct ResultCardView: View {
                         )
                     }
 
-                    ForEach(scores.details, id: \.0) { name, score in
+                    ForEach(Array(scores.details.enumerated()), id: \.element.0) { index, detail in
                         ScoreBar(
-                            label: name,
-                            icon: Self.scoreIconMap[name] ?? "circle",
-                            score: score,
-                            color: scoreColor(score)
+                            label: detail.0,
+                            icon: Self.scoreIconMap[detail.0] ?? "circle",
+                            score: detail.1,
+                            color: Self.scoreColorMap[detail.0] ?? scoreColor(detail.1),
+                            staggerIndex: index
                         )
                     }
                 }
@@ -263,7 +275,30 @@ struct ResultCardView: View {
                 .fill(Color.white)
         )
         .clipShape(RoundedRectangle(cornerRadius: 20))
-        .shadow(color: Color(red: 0.6, green: 0.4, blue: 0.7).opacity(0.15), radius: 12, y: 6)
+        .overlay(
+            rank == 1
+            ? RoundedRectangle(cornerRadius: 20)
+                .stroke(
+                    LinearGradient(
+                        colors: [
+                            Color(red: 1.0, green: 0.8, blue: 0.4),
+                            Color(red: 1.0, green: 0.6, blue: 0.3),
+                            Color(red: 1.0, green: 0.8, blue: 0.4)
+                        ],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    ),
+                    lineWidth: 2
+                )
+            : nil
+        )
+        .shadow(
+            color: rank == 1
+                ? Color(red: 1.0, green: 0.6, blue: 0.3).opacity(0.2)
+                : Color(red: 0.6, green: 0.4, blue: 0.7).opacity(0.15),
+            radius: rank == 1 ? 16 : 12,
+            y: 6
+        )
         .accessibilityElement(children: .contain)
         .accessibilityLabel("\(rank)위 사진, 총점 \(Int((candidate.scores?.totalScore ?? 0) * 100))점")
     }

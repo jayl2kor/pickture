@@ -144,7 +144,10 @@ final class PhotoViewModel: ObservableObject {
 
     func favoriteTopN() {
         let identifiers = sortedCandidates.prefix(topN).compactMap(\.assetIdentifier)
-        guard !identifiers.isEmpty else { return }
+        guard !identifiers.isEmpty else {
+            showFavoriteError = true
+            return
+        }
 
         isFavoriting = true
         Task {
@@ -155,10 +158,10 @@ final class PhotoViewModel: ObservableObject {
                 return
             }
 
-            // PHPickerResult의 assetIdentifier는 PHAsset.localIdentifier와 동일
             let assets = PHAsset.fetchAssets(withLocalIdentifiers: identifiers, options: nil)
             guard assets.count > 0 else {
                 isFavoriting = false
+                showFavoriteError = true
                 #if DEBUG
                 print("No PHAssets found for identifiers: \(identifiers)")
                 #endif
