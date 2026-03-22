@@ -1,6 +1,5 @@
 import SwiftUI
 import PhotosUI
-import Photos
 
 private extension View {
     @ViewBuilder
@@ -111,9 +110,6 @@ struct ContentView: View {
                 .padding(.bottom, 40)
             }
         }
-        .task {
-            await PHPhotoLibrary.requestAuthorization(for: .readWrite)
-        }
         #if DEBUG
         .onAppear {
             if CommandLine.arguments.contains("--auto-test") {
@@ -134,7 +130,7 @@ struct ContentView: View {
                 UIImpactFeedbackGenerator(style: .medium).impactOccurred()
             }
         }
-        .alert("사진 라이브러리 접근 필요", isPresented: $viewModel.showFavoriteError) {
+        .alert("전체 접근 권한 필요", isPresented: $viewModel.showFavoriteError) {
             Button("설정으로 이동") {
                 if let url = URL(string: UIApplication.openSettingsURLString) {
                     UIApplication.shared.open(url)
@@ -142,7 +138,7 @@ struct ContentView: View {
             }
             Button("취소", role: .cancel) {}
         } message: {
-            Text("즐겨찾기 등록을 위해 사진 라이브러리 쓰기 권한이 필요합니다. 설정에서 권한을 허용해주세요.")
+            Text("즐겨찾기 등록을 위해 사진 라이브러리의 \"전체 접근 허용\" 권한이 필요합니다. 설정 > 사진에서 변경해주세요.")
         }
         .alert("사진 로드 실패", isPresented: .init(
             get: { viewModel.loadFailCount > 0 && !viewModel.candidates.isEmpty },
@@ -239,7 +235,8 @@ struct ContentView: View {
             PhotosPicker(
                 selection: $viewModel.selectedItems,
                 maxSelectionCount: 50,
-                matching: .images
+                matching: .images,
+                photoLibrary: .shared()
             ) {
                 if viewModel.selectedItems.isEmpty {
                     VStack(spacing: 12) {

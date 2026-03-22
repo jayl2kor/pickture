@@ -106,6 +106,9 @@ final class PhotoViewModel: ObservableObject {
                 guard !Task.isCancelled else { return }
                 if let data = try? await item.loadTransferable(type: Data.self),
                    let image = UIImage(data: data) {
+                    #if DEBUG
+                    print("Loaded photo: itemIdentifier=\(item.itemIdentifier ?? "nil")")
+                    #endif
                     images.append((image, item.itemIdentifier))
                 } else {
                     failCount += 1
@@ -143,7 +146,18 @@ final class PhotoViewModel: ObservableObject {
     }
 
     func favoriteTopN() {
-        let identifiers = sortedCandidates.prefix(topN).compactMap(\.assetIdentifier)
+        let topCandidates = sortedCandidates.prefix(topN)
+        let identifiers = topCandidates.compactMap(\.assetIdentifier)
+
+        #if DEBUG
+        print("=== Favorite Debug ===")
+        print("topN=\(topN), candidates=\(topCandidates.count)")
+        for (i, c) in topCandidates.enumerated() {
+            print("[\(i)] assetIdentifier=\(c.assetIdentifier ?? "nil")")
+        }
+        print("Valid identifiers: \(identifiers)")
+        #endif
+
         guard !identifiers.isEmpty else {
             showFavoriteError = true
             return
@@ -152,13 +166,19 @@ final class PhotoViewModel: ObservableObject {
         isFavoriting = true
         Task {
             let status = await PHPhotoLibrary.requestAuthorization(for: .readWrite)
-            guard status == .authorized || status == .limited else {
+            #if DEBUG
+            print("Authorization status: \(status.rawValue) (3=authorized, 4=limited)")
+            #endif
+            guard status == .authorized else {
                 isFavoriting = false
                 showFavoriteError = true
                 return
             }
 
             let assets = PHAsset.fetchAssets(withLocalIdentifiers: identifiers, options: nil)
+            #if DEBUG
+            print("Fetched \(assets.count) PHAssets for \(identifiers.count) identifiers")
+            #endif
             guard assets.count > 0 else {
                 isFavoriting = false
                 showFavoriteError = true
