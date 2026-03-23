@@ -58,6 +58,11 @@ private extension View {
 struct ContentView: View {
     @StateObject private var viewModel = PhotoViewModel()
     @State private var showResults = false
+    @State private var showDeleteConfirmation = false
+    @State private var showRemainingViewer = false
+    @State private var remainingViewerIndex = 0
+    @AppStorage("hasSeenOnboarding") private var hasSeenOnboarding = false
+    @State private var showOnboarding = false
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     // Warm pink-coral accent
@@ -148,6 +153,32 @@ struct ContentView: View {
         } message: {
             Text("\(viewModel.loadFailCount)장의 사진을 불러오지 못했습니다. 나머지 사진으로 분석이 완료되었습니다.")
         }
+        .confirmationDialog(
+            "나머지 사진 삭제",
+            isPresented: $showDeleteConfirmation,
+            titleVisibility: .visible
+        ) {
+            Button("\(viewModel.deletableCount)장 삭제", role: .destructive) {
+                viewModel.deleteRemaining()
+            }
+            Button("취소", role: .cancel) {}
+        } message: {
+            if viewModel.protectedCount > 0 {
+                Text("\(viewModel.deletableCount)장을 삭제합니다. 보호된 \(viewModel.protectedCount)장은 삭제되지 않습니다.\n\n삭제된 사진은 '최근 삭제된 항목'에서 30일간 복구할 수 있습니다.")
+            } else {
+                Text("\(viewModel.deletableCount)장을 삭제합니다.\n\n삭제된 사진은 '최근 삭제된 항목'에서 30일간 복구할 수 있습니다.")
+            }
+        }
+        .alert("삭제 실패", isPresented: $viewModel.showDeleteError) {
+            Button("설정으로 이동") {
+                if let url = URL(string: UIApplication.openSettingsURLString) {
+                    UIApplication.shared.open(url)
+                }
+            }
+            Button("취소", role: .cancel) {}
+        } message: {
+            Text("사진 삭제를 위해 사진 라이브러리의 \"전체 접근 허용\" 권한이 필요합니다.")
+        }
         .onChange(of: viewModel.candidates.count) { newCount in
             if newCount == 0 { showResults = false }
         }
@@ -159,6 +190,27 @@ struct ContentView: View {
                 ) {
                     viewModel.exitCompareMode()
                 }
+            }
+        }
+        .fullScreenCover(isPresented: $showRemainingViewer) {
+            RemainingPhotoViewer(
+                candidates: viewModel.remainingCandidates,
+                currentIndex: $remainingViewerIndex,
+                onToggleProtection: { candidate in
+                    viewModel.toggleProtection(candidate)
+                },
+                onDismiss: {
+                    showRemainingViewer = false
+                }
+            )
+        }
+        .fullScreenCover(isPresented: $showOnboarding) {
+            OnboardingView(isPresented: $showOnboarding)
+        }
+        .onAppear {
+            if !hasSeenOnboarding {
+                showOnboarding = true
+                hasSeenOnboarding = true
             }
         }
     }
@@ -923,14 +975,70 @@ struct ContentView: View {
                 GridItem(.flexible(), spacing: 12),
                 GridItem(.flexible(), spacing: 12)
             ], spacing: 12) {
-                ForEach(Array(viewModel.sortedCandidates.dropFirst(viewModel.topN).enumerated()), id: \.element.id) { _, candidate in
-                    remainingCard(candidate: candidate)
+                ForEach(Array(viewModel.remainingCandidates.enumerated()), id: \.element.id) { index, candidate in
+                    remainingCard(candidate: candidate, index: index)
                 }
             }
+
+            // Protected count info
+            if viewModel.protectedCount > 0 {
+                HStack(spacing: 4) {
+                    Image(systemName: "lock.fill")
+                        .font(.system(size: 11, weight: .semibold))
+                    Text("\(viewModel.protectedCount)장 보호됨")
+                        .font(.system(size: 13, weight: .semibold, design: .rounded))
+                }
+                .foregroundColor(lockColor)
+                .padding(.top, 4)
+            }
+
+            // Delete remaining button
+            Button {
+                showDeleteConfirmation = true
+            } label: {
+                HStack(spacing: 10) {
+                    if viewModel.isDeleting {
+                        ProgressView()
+                            .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                            .scaleEffect(0.8)
+                    } else {
+                        Image(systemName: viewModel.isDeleted ? "checkmark" : "trash")
+                            .font(.system(size: 15, weight: .semibold))
+                    }
+
+                    let label: String = {
+                        if viewModel.isDeleting { return "삭제 중..." }
+                        if viewModel.isDeleted { return "삭제 완료" }
+                        if viewModel.deletableCount == 0 { return "삭제할 사진 없음" }
+                        if viewModel.protectedCount > 0 {
+                            return "보호된 사진 제외 \(viewModel.deletableCount)장 삭제"
+                        }
+                        return "나머지 \(viewModel.deletableCount)장 삭제"
+                    }()
+
+                    Text(label)
+                        .font(.system(size: 14, weight: .bold, design: .rounded))
+                }
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 14)
+                .background(
+                    RoundedRectangle(cornerRadius: 16)
+                        .fill(
+                            viewModel.isDeleted || viewModel.deletableCount == 0
+                            ? AnyShapeStyle(Color.gray.opacity(0.15))
+                            : AnyShapeStyle(LinearGradient(colors: [Color.red.opacity(0.85), Color.red.opacity(0.7)], startPoint: .leading, endPoint: .trailing))
+                        )
+                )
+                .foregroundColor(viewModel.isDeleted || viewModel.deletableCount == 0 ? .secondary : .white)
+            }
+            .buttonStyle(ScaleButtonStyle())
+            .disabled(viewModel.isDeleted || viewModel.isDeleting || viewModel.deletableCount == 0)
         }
     }
 
-    private func remainingCard(candidate: PhotoCandidate) -> some View {
+    private let lockColor = Color(red: 0.4, green: 0.65, blue: 0.95)
+
+    private func remainingCard(candidate: PhotoCandidate, index: Int) -> some View {
         ZStack(alignment: .bottomLeading) {
             Image(uiImage: candidate.image)
                 .resizable()
@@ -963,8 +1071,37 @@ struct ContentView: View {
             }
         }
         .clipShape(RoundedRectangle(cornerRadius: 16))
+        .overlay(
+            candidate.isProtected
+            ? RoundedRectangle(cornerRadius: 16)
+                .stroke(lockColor, lineWidth: 2)
+            : nil
+        )
         .shadow(color: Color.black.opacity(0.1), radius: 6, y: 3)
+        // Lock icon (top-right)
         .overlay(alignment: .topTrailing) {
+            Button {
+                withAnimation(.easeInOut(duration: 0.2)) {
+                    viewModel.toggleProtection(candidate)
+                }
+                UIImpactFeedbackGenerator(style: .light).impactOccurred()
+            } label: {
+                Image(systemName: candidate.isProtected ? "lock.fill" : "lock.open")
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundColor(candidate.isProtected ? lockColor : .white.opacity(0.7))
+                    .frame(width: 28, height: 28)
+                    .background(
+                        Circle().fill(
+                            candidate.isProtected
+                            ? lockColor.opacity(0.25)
+                            : Color.black.opacity(0.35)
+                        )
+                    )
+            }
+            .padding(8)
+        }
+        // Compare mode overlay (top-left)
+        .overlay(alignment: .topLeading) {
             if viewModel.isCompareMode {
                 let isSelected = viewModel.isSelectedForCompare(candidate)
                 ZStack {
@@ -986,17 +1123,19 @@ struct ContentView: View {
                 .allowsHitTesting(false)
             }
         }
-        .if(viewModel.isCompareMode) { view in
-            view
-                .contentShape(Rectangle())
-                .onTapGesture {
-                    withAnimation(.easeInOut(duration: 0.2)) {
-                        viewModel.toggleCompareSelection(candidate)
-                    }
-                    UIImpactFeedbackGenerator(style: .light).impactOccurred()
+        .contentShape(Rectangle())
+        .onTapGesture {
+            if viewModel.isCompareMode {
+                withAnimation(.easeInOut(duration: 0.2)) {
+                    viewModel.toggleCompareSelection(candidate)
                 }
+                UIImpactFeedbackGenerator(style: .light).impactOccurred()
+            } else {
+                remainingViewerIndex = index
+                showRemainingViewer = true
+            }
         }
         .accessibilityElement(children: .combine)
-        .accessibilityLabel("사진, 총점 \(Int((candidate.scores?.totalScore ?? 0) * 100))점")
+        .accessibilityLabel("사진, 총점 \(Int((candidate.scores?.totalScore ?? 0) * 100))점\(candidate.isProtected ? ", 보호됨" : "")")
     }
 }

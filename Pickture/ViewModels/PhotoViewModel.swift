@@ -24,6 +24,9 @@ final class PhotoViewModel: ObservableObject {
     @Published var loadFailCount = 0
     @Published var showFavoriteError = false
     @Published var isFavoriting = false
+    @Published var isDeleting = false
+    @Published var isDeleted = false
+    @Published var showDeleteError = false
     @Published var topN = 3
     @Published var sortCriteria: SortCriteria = .totalScore {
         didSet { updateSortedCandidates() }
@@ -49,6 +52,7 @@ final class PhotoViewModel: ObservableObject {
         selectedItems = []
         candidates = []
         isFavorited = false
+        isDeleted = false
         topN = 3
         exitCompareMode()
     }
@@ -84,6 +88,25 @@ final class PhotoViewModel: ObservableObject {
 
     func isSelectedForCompare(_ candidate: PhotoCandidate) -> Bool {
         compareSelection.contains(where: { $0.id == candidate.id })
+    }
+
+    // MARK: - Protection (Lock)
+
+    func toggleProtection(_ candidate: PhotoCandidate) {
+        guard let idx = candidates.firstIndex(where: { $0.id == candidate.id }) else { return }
+        candidates[idx].isProtected.toggle()
+    }
+
+    var remainingCandidates: [PhotoCandidate] {
+        Array(sortedCandidates.dropFirst(topN))
+    }
+
+    var protectedCount: Int {
+        remainingCandidates.filter(\.isProtected).count
+    }
+
+    var deletableCount: Int {
+        remainingCandidates.filter { !$0.isProtected }.count
     }
 
     func cancelAnalysis() {
@@ -203,6 +226,59 @@ final class PhotoViewModel: ObservableObject {
                 showFavoriteError = true
                 #if DEBUG
                 print("Failed to favorite: \(error)")
+                #endif
+            }
+        }
+    }
+
+    func deleteRemaining() {
+        let remaining = sortedCandidates.dropFirst(topN).filter { !$0.isProtected }
+        let identifiers = remaining.compactMap(\.assetIdentifier)
+
+        guard !identifiers.isEmpty else {
+            showDeleteError = true
+            return
+        }
+
+        isDeleting = true
+        Task {
+            let status = await PHPhotoLibrary.requestAuthorization(for: .readWrite)
+            guard status == .authorized else {
+                isDeleting = false
+                showDeleteError = true
+                return
+            }
+
+            let assets = PHAsset.fetchAssets(withLocalIdentifiers: identifiers, options: nil)
+            guard assets.count > 0 else {
+                isDeleting = false
+                showDeleteError = true
+                return
+            }
+
+            do {
+                try await PHPhotoLibrary.shared().performChanges {
+                    PHAssetChangeRequest.deleteAssets(assets as NSFastEnumeration)
+                }
+                isDeleting = false
+                isDeleted = true
+                UINotificationFeedbackGenerator().notificationOccurred(.success)
+                // Remove deleted candidates from array → remaining section disappears
+                let deletedSet = Set(identifiers)
+                candidates = candidates.filter { c in
+                    guard let id = c.assetIdentifier else { return true }
+                    return !deletedSet.contains(id)
+                }
+            } catch {
+                isDeleting = false
+                // User cancelled the system dialog — not an error
+                let nsError = error as NSError
+                if nsError.domain == "PHPhotosErrorDomain" && nsError.code == 3072 {
+                    return
+                }
+                showDeleteError = true
+                #if DEBUG
+                print("Failed to delete: \(error)")
                 #endif
             }
         }

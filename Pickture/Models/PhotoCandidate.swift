@@ -35,6 +35,7 @@ struct PhotoCandidate: Identifiable {
     let image: UIImage
     let assetIdentifier: String?
     var scores: AnalysisScores?
+    var isProtected: Bool = false
 }
 
 enum SortCriteria: String, CaseIterable {
