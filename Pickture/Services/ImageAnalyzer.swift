@@ -6,17 +6,40 @@ import CoreImage.CIFilterBuiltins
 final class ImageAnalyzer {
     private let ciContext = CIContext()
 
+    /// Max concurrent analyses to balance speed vs memory
+    private let maxConcurrency = 3
+
     func analyze(images: [(UIImage, String?)], progress: @escaping (Int, Int) -> Void) async -> [PhotoCandidate] {
         let total = images.count
-        var candidates: [PhotoCandidate] = []
+        var results = [(Int, PhotoCandidate)]()
+        results.reserveCapacity(total)
 
-        for (index, (image, identifier)) in images.enumerated() {
-            let scores = await analyzeOnBackground(image)
-            candidates.append(PhotoCandidate(image: image, assetIdentifier: identifier, scores: scores))
-            await MainActor.run { progress(index + 1, total) }
+        var completed = 0
+
+        // Process in chunks for bounded concurrency
+        for chunkStart in stride(from: 0, to: total, by: maxConcurrency) {
+            let chunkEnd = min(chunkStart + maxConcurrency, total)
+            let chunk = Array(images[chunkStart..<chunkEnd])
+
+            await withTaskGroup(of: (Int, PhotoCandidate).self) { group in
+                for (offset, (image, identifier)) in chunk.enumerated() {
+                    let globalIndex = chunkStart + offset
+                    group.addTask {
+                        let scores = await self.analyzeOnBackground(image)
+                        return (globalIndex, PhotoCandidate(image: image, assetIdentifier: identifier, scores: scores))
+                    }
+                }
+
+                for await result in group {
+                    results.append(result)
+                    completed += 1
+                    await MainActor.run { progress(completed, total) }
+                }
+            }
         }
 
-        return candidates
+        // Restore original order
+        return results.sorted(by: { $0.0 < $1.0 }).map(\.1)
     }
 
     private func analyzeOnBackground(_ image: UIImage) async -> AnalysisScores {
@@ -54,7 +77,6 @@ final class ImageAnalyzer {
 
         let ciImage = CIImage(cgImage: cgImage)
         let sharpness = measureSharpness(ciImage)
-        let exposure = measureExposure(ciImage)
 
         // Batch all Vision requests to share face detection pass
         let faceRectsRequest = VNDetectFaceRectanglesRequest()
@@ -70,6 +92,10 @@ final class ImageAnalyzer {
             .reduce(0, +) / max(Double((faceQualityRequest.results ?? []).count), 1)
         let eyesOpen = measureEyesOpenFrom(faceLandmarksRequest.results ?? [], imageSize: CGSize(width: cgImage.width, height: cgImage.height))
         let composition = measureComposition(faceObservations, imageSize: image.size)
+
+        // Measure exposure in face region if available, otherwise whole image
+        let largestFace = faceObservations.max(by: { $0.boundingBox.width * $0.boundingBox.height < $1.boundingBox.width * $1.boundingBox.height })
+        let exposure = measureExposure(ciImage, faceRegion: largestFace?.boundingBox)
 
         return AnalysisScores(
             sharpness: sharpness,
@@ -107,15 +133,31 @@ final class ImageAnalyzer {
         #if DEBUG
         print("[Sharpness] raw edgeStrength=\(edgeStrength)")
         #endif
-        return min(sqrt(edgeStrength) * 4.5, 1.0)
+        return min(pow(edgeStrength, 0.35) * 3.0, 1.0)
     }
 
     // MARK: - Exposure
 
-    private func measureExposure(_ ciImage: CIImage) -> Double {
+    private func measureExposure(_ ciImage: CIImage, faceRegion: CGRect? = nil) -> Double {
+        // If face detected, measure exposure in face region only
+        let targetImage: CIImage
+        if let faceBox = faceRegion {
+            // Vision boundingBox is normalized (0-1), convert to pixel coordinates
+            let extent = ciImage.extent
+            let faceRect = CGRect(
+                x: extent.origin.x + faceBox.origin.x * extent.width,
+                y: extent.origin.y + faceBox.origin.y * extent.height,
+                width: faceBox.width * extent.width,
+                height: faceBox.height * extent.height
+            )
+            targetImage = ciImage.cropped(to: faceRect)
+        } else {
+            targetImage = ciImage
+        }
+
         let average = CIFilter.areaAverage()
-        average.inputImage = ciImage
-        average.extent = ciImage.extent
+        average.inputImage = targetImage
+        average.extent = targetImage.extent
 
         guard let avgOutput = average.outputImage else { return 0.5 }
 
@@ -186,7 +228,7 @@ final class ImageAnalyzer {
 
         guard !eyeRatios.isEmpty else { return 0 }
         let minRatio = eyeRatios.min() ?? 0
-        return min(max((minRatio - 0.1) / 0.3, 0), 1.0)
+        return min(max((minRatio - 0.08) / 0.32, 0), 1.0)
     }
 
     private func eyeAspectRatio(_ points: [CGPoint]) -> Double {
@@ -210,19 +252,32 @@ final class ImageAnalyzer {
         let centerX = box.midX
         let centerY = box.midY
 
-        // Distance to image center
+        // --- Position score: center or rule-of-thirds ---
         let centerDist = sqrt(pow(centerX - 0.5, 2) + pow(centerY - 0.5, 2))
 
-        // Distance to nearest rule-of-thirds intersection
         let thirdPoints: [(Double, Double)] = [
             (1.0/3, 1.0/3), (1.0/3, 2.0/3),
             (2.0/3, 1.0/3), (2.0/3, 2.0/3)
         ]
         let thirdDist = thirdPoints.map { sqrt(pow(centerX - $0.0, 2) + pow(centerY - $0.1, 2)) }.min() ?? 1.0
 
-        // Use the better score of center vs thirds
         let bestDist = min(centerDist, thirdDist)
-        // Max possible distance is ~0.47 (corner to thirds point); normalize
-        return max(1.0 - bestDist * 2.5, 0)
+        let positionScore = max(1.0 - bestDist * 2.5, 0)
+
+        // --- Face size score: 10~45% of frame is ideal ---
+        let faceArea = box.width * box.height
+        let sizeScore: Double
+        if faceArea < 0.03 {
+            // Very small face — poor framing
+            sizeScore = faceArea / 0.03
+        } else if faceArea <= 0.45 {
+            // Good range
+            sizeScore = 1.0
+        } else {
+            // Too close / cropped
+            sizeScore = max(1.0 - (faceArea - 0.45) * 3.0, 0.3)
+        }
+
+        return positionScore * 0.6 + sizeScore * 0.4
     }
 }
