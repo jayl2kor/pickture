@@ -9,7 +9,7 @@ final class ImageAnalyzer {
     /// Max concurrent analyses to balance speed vs memory
     private let maxConcurrency = 3
 
-    func analyze(images: [(UIImage, String?)], progress: @escaping (Int, Int) -> Void) async -> [PhotoCandidate] {
+    func analyze(images: [(UIImage, String?)], mode: PhotoMode = .portrait, progress: @escaping (Int, Int) -> Void) async -> [PhotoCandidate] {
         let total = images.count
         var results = [(Int, PhotoCandidate)]()
         results.reserveCapacity(total)
@@ -25,7 +25,7 @@ final class ImageAnalyzer {
                 for (offset, (image, identifier)) in chunk.enumerated() {
                     let globalIndex = chunkStart + offset
                     group.addTask {
-                        let scores = await self.analyzeOnBackground(image)
+                        let scores = await self.analyzeOnBackground(image, mode: mode)
                         return (globalIndex, PhotoCandidate(image: image, assetIdentifier: identifier, scores: scores))
                     }
                 }
@@ -42,11 +42,11 @@ final class ImageAnalyzer {
         return results.sorted(by: { $0.0 < $1.0 }).map(\.1)
     }
 
-    private func analyzeOnBackground(_ image: UIImage) async -> AnalysisScores {
+    private func analyzeOnBackground(_ image: UIImage, mode: PhotoMode) async -> AnalysisScores {
         await withCheckedContinuation { continuation in
             DispatchQueue.global(qos: .userInitiated).async { [self] in
                 let resized = resizeForAnalysis(image)
-                let scores = analyzeImage(resized)
+                let scores = mode == .portrait ? analyzeImage(resized) : analyzeFullBody(resized)
                 continuation.resume(returning: scores)
             }
         }
@@ -276,6 +276,109 @@ final class ImageAnalyzer {
         } else {
             // Too close / cropped
             sizeScore = max(1.0 - (faceArea - 0.45) * 3.0, 0.3)
+        }
+
+        return positionScore * 0.6 + sizeScore * 0.4
+    }
+
+    // MARK: - Full Body Analysis
+
+    private func analyzeFullBody(_ image: UIImage) -> AnalysisScores {
+        guard let cgImage = image.cgImage else {
+            return AnalysisScores(photoMode: .fullBody, sharpness: 0, exposure: 0.5, composition: 0.5)
+        }
+
+        let ciImage = CIImage(cgImage: cgImage)
+        let sharpness = measureSharpness(ciImage)
+
+        // Body detection
+        let bodyRequest = VNDetectHumanRectanglesRequest()
+        let poseRequest = VNDetectHumanBodyPoseRequest()
+        let handler = VNImageRequestHandler(cgImage: cgImage, options: [:])
+        try? handler.perform([bodyRequest, poseRequest])
+
+        let bodyObservations = bodyRequest.results ?? []
+        let poseObservations = poseRequest.results ?? []
+
+        let bodyDetection = measureBodyDetection(bodyObservations)
+        let poseStability = measurePoseStability(poseObservations)
+
+        // Exposure: use body region if available
+        let largestBody = bodyObservations.max(by: { $0.boundingBox.width * $0.boundingBox.height < $1.boundingBox.width * $1.boundingBox.height })
+        let exposure = measureExposure(ciImage, faceRegion: largestBody?.boundingBox)
+
+        let composition = measureBodyComposition(bodyObservations)
+
+        return AnalysisScores(
+            photoMode: .fullBody,
+            sharpness: sharpness,
+            bodyDetection: bodyDetection,
+            poseStability: poseStability,
+            exposure: exposure,
+            composition: composition
+        )
+    }
+
+    private func measureBodyDetection(_ bodies: [VNHumanObservation]) -> Double {
+        guard !bodies.isEmpty else { return 0 }
+        let confidences = bodies.map { Double($0.confidence) }
+        return confidences.max() ?? 0
+    }
+
+    private func measurePoseStability(_ poses: [VNHumanBodyPoseObservation]) -> Double {
+        guard let pose = poses.first else { return 0 }
+
+        let keyJoints: [VNHumanBodyPoseObservation.JointName] = [
+            .nose, .neck,
+            .leftShoulder, .rightShoulder,
+            .leftElbow, .rightElbow,
+            .leftWrist, .rightWrist,
+            .leftHip, .rightHip,
+            .leftKnee, .rightKnee,
+            .leftAnkle, .rightAnkle
+        ]
+
+        var totalConfidence: Double = 0
+        var count: Double = 0
+        for joint in keyJoints {
+            if let point = try? pose.recognizedPoint(joint), point.confidence > 0.1 {
+                totalConfidence += Double(point.confidence)
+                count += 1
+            }
+        }
+
+        guard count > 0 else { return 0 }
+        return totalConfidence / count
+    }
+
+    private func measureBodyComposition(_ bodies: [VNHumanObservation]) -> Double {
+        guard let body = bodies.max(by: { $0.boundingBox.width * $0.boundingBox.height < $1.boundingBox.width * $1.boundingBox.height }) else {
+            return 0.5
+        }
+
+        let box = body.boundingBox
+        let centerX = box.midX
+        let centerY = box.midY
+
+        // Position score
+        let centerDist = sqrt(pow(centerX - 0.5, 2) + pow(centerY - 0.5, 2))
+        let thirdPoints: [(Double, Double)] = [
+            (1.0/3, 1.0/3), (1.0/3, 2.0/3),
+            (2.0/3, 1.0/3), (2.0/3, 2.0/3)
+        ]
+        let thirdDist = thirdPoints.map { sqrt(pow(centerX - $0.0, 2) + pow(centerY - $0.1, 2)) }.min() ?? 1.0
+        let bestDist = min(centerDist, thirdDist)
+        let positionScore = max(1.0 - bestDist * 2.5, 0)
+
+        // Body size score: 20~70% of frame is ideal for full-body
+        let bodyArea = box.width * box.height
+        let sizeScore: Double
+        if bodyArea < 0.05 {
+            sizeScore = bodyArea / 0.05
+        } else if bodyArea <= 0.70 {
+            sizeScore = 1.0
+        } else {
+            sizeScore = max(1.0 - (bodyArea - 0.70) * 3.0, 0.3)
         }
 
         return positionScore * 0.6 + sizeScore * 0.4

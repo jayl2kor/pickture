@@ -99,14 +99,24 @@ struct ContentView: View {
                 VStack(spacing: 0) {
                     if viewModel.candidates.isEmpty {
                         headerSection
-                        selectionSection
-                            .padding(.top, 16)
-                        if !viewModel.selectedItems.isEmpty {
-                            topNSelector
-                                .padding(.top, 16)
+
+                        if !viewModel.modeSelected {
+                            // Step 1: Choose mode
+                            modeSelector
+                                .padding(.top, 20)
+                        } else {
+                            // Step 2: Select photos & analyze
+                            selectedModeBadge
+                                .padding(.top, 12)
+                            selectionSection
+                                .padding(.top, 12)
+                            if !viewModel.selectedItems.isEmpty {
+                                topNSelector
+                                    .padding(.top, 12)
+                            }
+                            analyzeSection
+                                .padding(.top, 24)
                         }
-                        analyzeSection
-                            .padding(.top, 24)
                     }
                     resultsSection
                         .padding(.top, viewModel.candidates.isEmpty ? 28 : 16)
@@ -532,6 +542,108 @@ struct ContentView: View {
         .shadow(color: Color.pink.opacity(0.06), radius: 10, y: 4)
     }
 
+    private var modeSelector: some View {
+        VStack(spacing: 12) {
+            Text("어떤 사진을 선별할까요?")
+                .font(.system(size: 17, weight: .semibold, design: .rounded))
+                .foregroundColor(textPrimary)
+
+            HStack(spacing: 12) {
+                modeCard(
+                    mode: .portrait,
+                    icon: "person.crop.rectangle",
+                    title: "인물 사진",
+                    description: "얼굴 중심의\n클로즈업 사진",
+                    colors: [Color(red: 1.0, green: 0.5, blue: 0.6), Color(red: 0.7, green: 0.5, blue: 0.9)]
+                )
+
+                modeCard(
+                    mode: .fullBody,
+                    icon: "figure.stand",
+                    title: "전신 사진",
+                    description: "전신이 보이는\n인물 사진",
+                    colors: [Color(red: 0.4, green: 0.65, blue: 1.0), Color(red: 0.5, green: 0.8, blue: 0.6)]
+                )
+            }
+        }
+    }
+
+    private func modeCard(mode: PhotoMode, icon: String, title: String, description: String, colors: [Color]) -> some View {
+        Button {
+            withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
+                viewModel.photoMode = mode
+                viewModel.modeSelected = true
+            }
+        } label: {
+            VStack(spacing: 12) {
+                ZStack {
+                    Circle()
+                        .fill(
+                            LinearGradient(colors: colors.map { $0.opacity(0.15) },
+                                           startPoint: .topLeading, endPoint: .bottomTrailing)
+                        )
+                        .frame(width: 64, height: 64)
+
+                    Image(systemName: icon)
+                        .font(.system(size: 28, weight: .medium))
+                        .foregroundStyle(
+                            LinearGradient(colors: colors, startPoint: .topLeading, endPoint: .bottomTrailing)
+                        )
+                }
+
+                Text(title)
+                    .font(.system(size: 16, weight: .bold, design: .rounded))
+                    .foregroundColor(textPrimary)
+
+                Text(description)
+                    .font(.system(size: 12, design: .rounded))
+                    .foregroundColor(textTertiary)
+                    .multilineTextAlignment(.center)
+                    .lineSpacing(2)
+            }
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 20)
+            .background(
+                RoundedRectangle(cornerRadius: 20)
+                    .fill(cardFill)
+            )
+            .shadow(color: colors[0].opacity(0.1), radius: 10, y: 4)
+        }
+        .buttonStyle(ScaleButtonStyle())
+    }
+
+    private var selectedModeBadge: some View {
+        HStack(spacing: 8) {
+            Image(systemName: viewModel.photoMode == .portrait ? "person.crop.rectangle" : "figure.stand")
+                .font(.system(size: 14, weight: .semibold))
+                .foregroundStyle(accentGradient)
+
+            Text(viewModel.photoMode.rawValue)
+                .font(.system(size: 14, weight: .semibold, design: .rounded))
+                .foregroundColor(textPrimary)
+
+            Spacer()
+
+            Button {
+                withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
+                    viewModel.modeSelected = false
+                    viewModel.selectedItems = []
+                }
+            } label: {
+                Text("변경")
+                    .font(.system(size: 13, weight: .semibold, design: .rounded))
+                    .foregroundStyle(accentGradient)
+            }
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 12)
+        .background(
+            RoundedRectangle(cornerRadius: 12)
+                .fill(cardFill)
+        )
+        .shadow(color: Color.pink.opacity(0.06), radius: 6, y: 2)
+    }
+
     private var topNSelector: some View {
         HStack(spacing: 0) {
             VStack(alignment: .leading, spacing: 2) {
@@ -836,7 +948,7 @@ struct ContentView: View {
 
             // Sort picker
             Menu {
-                ForEach(SortCriteria.allCases, id: \.self) { criteria in
+                ForEach(SortCriteria.cases(for: viewModel.photoMode), id: \.self) { criteria in
                     Button {
                         withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
                             viewModel.sortCriteria = criteria

@@ -28,6 +28,8 @@ final class PhotoViewModel: ObservableObject {
     @Published var isDeleted = false
     @Published var showDeleteError = false
     @Published var topN = 3
+    @Published var photoMode: PhotoMode = .portrait
+    @Published var modeSelected = false
     @Published var sortCriteria: SortCriteria = .totalScore {
         didSet { updateSortedCandidates() }
     }
@@ -54,6 +56,7 @@ final class PhotoViewModel: ObservableObject {
         isFavorited = false
         isDeleted = false
         topN = 3
+        modeSelected = false
         exitCompareMode()
     }
 
@@ -151,7 +154,7 @@ final class PhotoViewModel: ObservableObject {
         progressCurrent = 0
         progressTotal = images.count
 
-        candidates = await analyzer.analyze(images: images) { [weak self] current, total in
+        candidates = await analyzer.analyze(images: images, mode: photoMode) { [weak self] current, total in
             self?.progressCurrent = current
             self?.progressTotal = total
         }

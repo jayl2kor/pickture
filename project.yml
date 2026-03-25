@@ -2,7 +2,7 @@ name: Pickture
 options:
   bundleIdPrefix: com.jayl2kor
   deploymentTarget:
-    iOS: "16.0"
+    iOS: "17.0"
   xcodeVersion: "15.0"
 
 targets:

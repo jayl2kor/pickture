@@ -187,6 +187,8 @@ struct ResultCardView: View {
         "선명도": "camera.aperture",
         "얼굴 품질": "face.smiling",
         "눈 뜨임": "eye",
+        "신체 감지": "figure.stand",
+        "포즈": "figure.walk",
         "노출": "sun.max.fill",
         "구도": "squareshape.split.3x3"
     ]
@@ -196,6 +198,8 @@ struct ResultCardView: View {
         "선명도": Color(red: 0.4, green: 0.7, blue: 1.0),       // bright sky blue
         "얼굴 품질": Color(red: 1.0, green: 0.5, blue: 0.6),    // coral pink
         "눈 뜨임": Color(red: 0.55, green: 0.8, blue: 0.45),    // fresh green
+        "신체 감지": Color(red: 1.0, green: 0.5, blue: 0.6),     // coral pink
+        "포즈": Color(red: 0.55, green: 0.8, blue: 0.45),        // fresh green
         "노출": Color(red: 1.0, green: 0.75, blue: 0.3),        // warm amber
         "구도": Color(red: 0.7, green: 0.5, blue: 0.9)          // soft violet
     ]
@@ -238,12 +242,12 @@ struct ResultCardView: View {
 
             if let scores = candidate.scores {
                 VStack(spacing: 8) {
-                    if !scores.faceDetected {
+                    if !scores.subjectDetected {
                         HStack(spacing: 6) {
                             Image(systemName: "exclamationmark.triangle.fill")
                                 .font(.system(size: 12))
                                 .foregroundColor(Color.orange)
-                            Text("얼굴이 감지되지 않아 일부 항목이 0점입니다")
+                            Text("인물이 감지되지 않아 일부 항목이 0점입니다")
                                 .font(.system(size: 12, design: .rounded))
                                 .foregroundColor(Color(red: 0.6, green: 0.5, blue: 0.4))
                         }
