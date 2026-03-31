@@ -1,3 +1,7 @@
+---
+title: Privacy Policy
+---
+
 # Privacy Policy / 개인정보 처리방침
 
 **Last Updated / 최종 수정일: 2026-03-31**
